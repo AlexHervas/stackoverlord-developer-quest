@@ -1,12 +1,31 @@
 import Phaser from "phaser";
 
 export default class PlayScene extends Phaser.Scene {
-  constructor() {
-    super("PlayScene");
-  }
-
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
+
+  private onProjectTrigger: (projectId: string) => void;
+
+  constructor(onProjectTrigger: (projectId: string) => void) {
+    super("PlayScene");
+    this.onProjectTrigger = onProjectTrigger;
+  }
+
+  preload() {
+    this.load.spritesheet(
+      "dude",
+      "https://labs.phaser.io/assets/sprites/dude.png",
+      {
+        frameWidth: 32,
+        frameHeight: 48,
+      }
+    );
+
+    this.load.image(
+      "logo",
+      "https://labs.phaser.io/assets/sprites/phaser3-logo.png"
+    );
+  }
 
   create() {
     const { width, height } = this.scale;
@@ -36,10 +55,27 @@ export default class PlayScene extends Phaser.Scene {
     });
 
     this.cursors = this.input?.keyboard?.createCursorKeys();
+
+    const projectZone = this.physics.add
+      .staticImage(600, 300, "logo")
+      .setScale(0.2);
+
+    projectZone.refreshBody();
+
+    this.physics.add.overlap(
+      this.player,
+      projectZone,
+      () => {
+        this.onProjectTrigger("NoPiques 🔍");
+        projectZone.destroy();
+      },
+      undefined,
+      this
+    );
   }
 
   update() {
-    if (!this.cursors || !this.player) return;
+    if (!this.player || !this.cursors) return;
 
     if (this.cursors.left?.isDown) {
       this.player.setVelocityX(-160);
