@@ -56,18 +56,49 @@ export default class PlayScene extends Phaser.Scene {
 
     this.cursors = this.input?.keyboard?.createCursorKeys();
 
-    const projectZone = this.physics.add
+    // ZONA 1 – NoPiques
+    const zoneNoPiques = this.physics.add
       .staticImage(600, 300, "logo")
       .setScale(0.2);
-
-    projectZone.refreshBody();
-
+    zoneNoPiques.refreshBody();
     this.physics.add.overlap(
       this.player,
-      projectZone,
+      zoneNoPiques,
       () => {
         this.onProjectTrigger("NoPiques 🔍");
-        projectZone.destroy();
+        zoneNoPiques.destroy();
+      },
+      undefined,
+      this
+    );
+
+    // ZONA 2 – Wallaclone
+    const zoneWallaclone = this.physics.add
+      .staticImage(400, 400, "logo")
+      .setScale(0.2);
+    zoneWallaclone.refreshBody();
+    this.physics.add.overlap(
+      this.player,
+      zoneWallaclone,
+      () => {
+        this.onProjectTrigger("Wallaclone 🛒");
+        zoneWallaclone.destroy();
+      },
+      undefined,
+      this
+    );
+
+    // ZONA 3 – Portfolio
+    const zonePortfolio = this.physics.add
+      .staticImage(200, 300, "logo")
+      .setScale(0.2);
+    zonePortfolio.refreshBody();
+    this.physics.add.overlap(
+      this.player,
+      zonePortfolio,
+      () => {
+        this.onProjectTrigger("Este portfolio 🎮");
+        zonePortfolio.destroy();
       },
       undefined,
       this
