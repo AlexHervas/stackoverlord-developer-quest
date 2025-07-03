@@ -1,12 +1,13 @@
 import Phaser from "phaser";
+import type { ProjectData } from "../types/types";
 
 export default class PlayScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
 
-  private onProjectTrigger: (projectId: string) => void;
+  private onProjectTrigger: (projectId: ProjectData) => void;
 
-  constructor(onProjectTrigger: (projectId: string) => void) {
+  constructor(onProjectTrigger: (projectId: ProjectData) => void) {
     super("PlayScene");
     this.onProjectTrigger = onProjectTrigger;
   }
@@ -65,7 +66,13 @@ export default class PlayScene extends Phaser.Scene {
       this.player,
       zoneNoPiques,
       () => {
-        this.onProjectTrigger("NoPiques 🔍");
+        this.onProjectTrigger({
+          id: "nopiques",
+          title: "NoPiques",
+          description:
+            "App que detecta posibles mensajes de phishing usando IA.",
+          link: "https://github.com/AlexHervas/NoPiques",
+        });
         zoneNoPiques.destroy();
       },
       undefined,
@@ -81,7 +88,13 @@ export default class PlayScene extends Phaser.Scene {
       this.player,
       zoneWallaclone,
       () => {
-        this.onProjectTrigger("Wallaclone 🛒");
+        this.onProjectTrigger({
+          id: "wallaclone",
+          title: "Wallaclone",
+          description:
+            "Clon funcional de Wallapop con chat, login y panel de anuncios.",
+          link: "https://github.com/KeepcodersWeb17/wallaclone",
+        });
         zoneWallaclone.destroy();
       },
       undefined,
@@ -97,7 +110,13 @@ export default class PlayScene extends Phaser.Scene {
       this.player,
       zonePortfolio,
       () => {
-        this.onProjectTrigger("Este portfolio 🎮");
+        this.onProjectTrigger({
+          id: "portfolio",
+          title: "Este Portfolio",
+          description:
+            "Un portfolio interactivo gamificado hecho con React, Tailwind y Phaser.",
+          link: "https://github.com/AlexHervas/PhaserPortfolio",
+        });
         zonePortfolio.destroy();
       },
       undefined,
