@@ -24,6 +24,9 @@ export default function GameCanvas() {
         new PlayScene((project: ProjectData) => setActiveProject(project)),
       ],
       physics: { default: "arcade", arcade: { debug: true } },
+      render: {
+        pixelArt: true,
+      },
     });
 
     return () => {
