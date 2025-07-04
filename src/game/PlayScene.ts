@@ -14,6 +14,7 @@ export default class PlayScene extends Phaser.Scene {
   private fullDialogText = "";
   private currentCharIndex = 0;
   private continueHint!: Phaser.GameObjects.Text;
+  private continueHintTween!: Phaser.Tweens.Tween;
 
   private onProjectTrigger: (projectId: ProjectData) => void;
 
@@ -60,7 +61,6 @@ export default class PlayScene extends Phaser.Scene {
     this.player = this.physics.add
       .sprite(width / 2, height / 2, "playerSprite")
       .setScale(2.5);
-
     this.player.setCollideWorldBounds(true);
 
     if (this.player.body instanceof Phaser.Physics.Arcade.Body) {
@@ -73,7 +73,7 @@ export default class PlayScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.SPACE
     );
 
-    // Caja de diálogo (oculta inicialmente)
+    // Caja de diálogo
     this.dialogBox = this.add
       .rectangle(400, 550, 700, 80, 0x000000, 0.7)
       .setOrigin(0.5)
@@ -89,6 +89,7 @@ export default class PlayScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setVisible(false);
 
+    // Hint continuar
     this.continueHint = this.add
       .text(400, 580, "[ESPACIO] Continuar", {
         fontSize: "14px",
@@ -98,13 +99,14 @@ export default class PlayScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setVisible(false);
 
-    this.tweens.add({
+    this.continueHintTween = this.tweens.add({
       targets: this.continueHint,
       alpha: { from: 1, to: 0 },
       ease: "Cubic.easeInOut",
       duration: 800,
       repeat: -1,
       yoyo: true,
+      paused: true,
     });
 
     // Zonas interactivas
@@ -159,7 +161,7 @@ export default class PlayScene extends Phaser.Scene {
       );
     });
 
-    // Mago dialogo al entrar en su zona
+    // Mago diálogo
     this.physics.add.overlap(this.player, wizardZone, () => {
       if (!this.dialogVisible) {
         this.showDialog(
@@ -195,18 +197,19 @@ export default class PlayScene extends Phaser.Scene {
 
     this.player.setVelocity(velocityX, velocityY);
 
-    // Ocultar diálogo al pulsar ESPACIO
     if (this.dialogVisible && Phaser.Input.Keyboard.JustDown(this.spaceKey!)) {
       this.hideDialog();
     }
   }
 
-  // Función para mostrar diálogo con efecto máquina de escribir
   private showDialog(fullText: string) {
     this.dialogVisible = true;
     this.dialogBox.setVisible(true);
     this.dialogText.setVisible(true);
+
     this.continueHint.setVisible(false);
+    this.continueHintTween?.pause();
+
     this.dialogText.setText("");
     this.fullDialogText = fullText;
     this.currentCharIndex = 0;
@@ -217,25 +220,33 @@ export default class PlayScene extends Phaser.Scene {
 
     this.typingTimer = this.time.addEvent({
       delay: 40,
+      repeat: fullText.length - 1,
       callback: () => {
-        if (this.currentCharIndex < this.fullDialogText.length) {
-          this.dialogText.text += this.fullDialogText[this.currentCharIndex];
-          this.currentCharIndex++;
-        } else {
-          this.typingTimer?.remove(false);
+        this.dialogText.text += this.fullDialogText[this.currentCharIndex];
+        this.currentCharIndex++;
+
+        // Detectar si se ha terminado de escribir
+        if (this.currentCharIndex >= this.fullDialogText.length) {
+          this.continueHint.setAlpha(1);
           this.continueHint.setVisible(true);
+
+          // Reanudar el tween de parpadeo
+          if (this.continueHintTween) {
+            this.continueHintTween.play();
+          }
         }
       },
-      repeat: fullText.length - 1,
+      callbackScope: this,
     });
   }
 
-  // Ocultar diálogo y limpiar timer
   private hideDialog() {
     this.dialogBox.setVisible(false);
     this.dialogText.setVisible(false);
     this.dialogVisible = false;
+
     this.continueHint.setVisible(false);
+    this.continueHintTween?.pause();
 
     if (this.typingTimer) {
       this.typingTimer.remove(false);
