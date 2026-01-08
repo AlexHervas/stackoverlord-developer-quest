@@ -1,69 +1,60 @@
-import { useEffect, useRef, useState } from "react";
-import type { ProjectData } from "../types/types";
+import { useEffect, useRef } from "react";
 import Phaser from "phaser";
+
 import BootScene from "../game/BootScene";
 import MenuScene from "../game/MenuScene";
 import PlayScene from "../game/PlayScene";
+import Nivel2Scene from "../game/Nivel2Scene";
+
+const BASE_WIDTH = 320;
+const BASE_HEIGHT = 160;
 
 export default function GameCanvas() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [activeProject, setActiveProject] = useState<ProjectData | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const gameRef = useRef<Phaser.Game | null>(null);
 
   useEffect(() => {
-    if (!ref.current) return;
+    if (!containerRef.current) return;
+    if (gameRef.current) return;
 
-    const game = new Phaser.Game({
+    gameRef.current = new Phaser.Game({
       type: Phaser.AUTO,
-      width: 800,
-      height: 600,
-      parent: ref.current,
-      backgroundColor: "#1a1a1a",
-      scene: [
-        new BootScene(),
-        new MenuScene(),
-        new PlayScene((project: ProjectData) => setActiveProject(project)),
-      ],
-      physics: { default: "arcade", arcade: { debug: true } },
+      parent: containerRef.current,
+      backgroundColor: "#0f172a",
       render: {
         pixelArt: true,
+        antialias: false,
       },
+      scale: {
+        mode: Phaser.Scale.ENVELOP, // Fullscreen sin barras
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: BASE_WIDTH,
+        height: BASE_HEIGHT,
+      },
+      physics: {
+        default: "arcade",
+        arcade: {
+          debug: false,
+          gravity: { x: 0, y: 0 },
+        },
+      },
+      scene: [BootScene, MenuScene, PlayScene, Nivel2Scene],
     });
 
     return () => {
-      game.destroy(true);
+      gameRef.current?.destroy(true);
+      gameRef.current = null;
     };
   }, []);
 
   return (
-    <>
-      <div ref={ref} className="w-full h-full" />
-
-      {activeProject && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 z-10">
-          <div className="bg-white text-black p-6 rounded-lg w-[350px] text-center shadow-lg">
-            <h2 className="text-2xl font-bold mb-2">{activeProject.title}</h2>
-            <p className="mb-4 text-sm">{activeProject.description}</p>
-
-            {activeProject.link && (
-              <a
-                href={activeProject.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline block mb-4"
-              >
-                Ver en GitHub
-              </a>
-            )}
-
-            <button
-              className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700"
-              onClick={() => setActiveProject(null)}
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
-    </>
+    <div
+      ref={containerRef}
+      style={{
+        width: "100vw",
+        height: "100vh",
+        overflow: "hidden",
+      }}
+    />
   );
 }

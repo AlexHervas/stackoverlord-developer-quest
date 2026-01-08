@@ -1,255 +1,122 @@
 import Phaser from "phaser";
-import type { ProjectData } from "../types/types";
+
+const ROOM_WIDTH = 320;
+const ROOM_HEIGHT = 160;
 
 export default class PlayScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
-  private spaceKey?: Phaser.Input.Keyboard.Key;
+  private wizard!: Phaser.Physics.Arcade.Sprite;
 
-  private dialogBox!: Phaser.GameObjects.Rectangle;
-  private dialogText!: Phaser.GameObjects.Text;
-  private dialogVisible = false;
-
-  private typingTimer?: Phaser.Time.TimerEvent;
-  private fullDialogText = "";
-  private currentCharIndex = 0;
-  private continueHint!: Phaser.GameObjects.Text;
-  private continueHintTween!: Phaser.Tweens.Tween;
-
-  private onProjectTrigger: (projectId: ProjectData) => void;
-
-  constructor(onProjectTrigger: (projectId: ProjectData) => void) {
+  constructor() {
     super("PlayScene");
-    this.onProjectTrigger = onProjectTrigger;
   }
 
   preload() {
-    this.load.image(
-      "logo",
-      "https://labs.phaser.io/assets/sprites/phaser3-logo.png"
-    );
-    this.load.image("floor", "assets/floor_1.png");
-    this.load.image("wall", "assets/wall_1.png");
-    this.load.image("chest", "assets/chest_closed.png");
-    this.load.image("torch", "assets/torch_normal.png");
-    this.load.image("wizard", "assets/wizard.png");
+    this.load.image("tiles", "assets/tilemap.png");
+    this.load.tilemapTiledJSON("map", "assets/lvl1MageColliders.json");
     this.load.image("playerSprite", "assets/player.png");
+    this.load.image("wizard", "assets/wizard.png");
   }
 
   create() {
-    const { width, height } = this.scale;
+    const map = this.make.tilemap({ key: "map" });
 
-    // Suelo
-    for (let x = 0; x <= 800; x += 32) {
-      for (let y = 0; y <= 600; y += 32) {
-        this.add.image(x, y, "floor").setOrigin(0).setDisplaySize(32, 32);
+    const tileset = map.addTilesetImage("tiles", "tiles");
+    if (!tileset) throw new Error("Tileset no encontrado");
+
+    const groundLayer = map.createLayer("Ground", tileset);
+    if (!groundLayer) throw new Error("Layer 'Ground' no encontrada");
+
+    const wallsLayer = map.createLayer("Walls", tileset);
+    if (!wallsLayer) throw new Error("Layer 'Walls' no encontrada");
+
+    const decorationLayer = map.createLayer("Decoration", tileset);
+    if (!decorationLayer) throw new Error("Layer 'Decoration' no encontrada");
+
+    // Debug mapa
+    console.log("[MAP]", {
+      mapPixels: { w: map.widthInPixels, h: map.heightInPixels },
+      expected: { w: ROOM_WIDTH, h: ROOM_HEIGHT },
+      tileSize: { w: map.tileWidth, h: map.tileHeight },
+    });
+
+    /*
+      const collidingTiles = wallsLayer.filterTiles(
+      (tile: Phaser.Tilemaps.Tile) => {
+        const props = tile.properties as { collides?: boolean };
+        return props.collides === true;
       }
-    }
+    );
+      console.log("Colliding tiles count:", collidingTiles.length);
+    */
 
-    // Decoración
-    this.add.image(150, 150, "wall").setScale(2);
-    this.add.image(700, 120, "torch").setScale(2);
-    this.add.image(300, 200, "chest").setScale(2);
+    wallsLayer.setCollisionByProperty({ collides: true });
+    decorationLayer.setCollisionByProperty({ collides: true });
 
-    // Mago
-    const wizardZone = this.physics.add
-      .staticImage(500, 350, "wizard")
-      .setScale(2);
-    wizardZone.refreshBody();
+    // Límites fijos de room
+    this.physics.world.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
 
-    // Personaje
+    // Cámara
+    const cam = this.cameras.main;
+    cam.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
+    cam.roundPixels = true;
+    cam.stopFollow();
+    cam.centerOn(ROOM_WIDTH / 2, ROOM_HEIGHT / 2);
+
+    // Player centrado de la sala
     this.player = this.physics.add
-      .sprite(width / 2, height / 2, "playerSprite")
-      .setScale(2.5);
+      .sprite(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, "playerSprite")
+      .setScale(1);
+
     this.player.setCollideWorldBounds(true);
 
-    if (this.player.body instanceof Phaser.Physics.Arcade.Body) {
-      this.player.body.setAllowGravity(false);
-    }
+    // NPC quieto (mago)
+    this.wizard = this.physics.add
+      .staticSprite(ROOM_WIDTH / 2 + 150, ROOM_HEIGHT / 2 + 40, "wizard")
+      .setScale(1);
 
-    // Teclado
-    this.cursors = this.input?.keyboard?.createCursorKeys();
-    this.spaceKey = this.input.keyboard?.addKey(
-      Phaser.Input.Keyboard.KeyCodes.SPACE
-    );
+    // Colisiones
+    this.physics.add.collider(this.player, wallsLayer);
+    this.physics.add.collider(this.player, decorationLayer);
 
-    // Caja de diálogo
-    this.dialogBox = this.add
-      .rectangle(400, 550, 700, 80, 0x000000, 0.7)
-      .setOrigin(0.5)
-      .setVisible(false);
-
-    this.dialogText = this.add
-      .text(400, 550, "", {
-        fontSize: "18px",
-        color: "#ffffff",
-        wordWrap: { width: 660 },
-        align: "center",
-      })
-      .setOrigin(0.5)
-      .setVisible(false);
-
-    // Hint continuar
-    this.continueHint = this.add
-      .text(400, 580, "[ESPACIO] Continuar", {
-        fontSize: "14px",
-        color: "#ffff88",
-        fontStyle: "italic",
-      })
-      .setOrigin(0.5)
-      .setVisible(false);
-
-    this.continueHintTween = this.tweens.add({
-      targets: this.continueHint,
-      alpha: { from: 1, to: 0 },
-      ease: "Cubic.easeInOut",
-      duration: 800,
-      repeat: -1,
-      yoyo: true,
-      paused: true,
+    // Alcanzar al mago
+    this.physics.add.overlap(this.player, this.wizard, () => {
+      console.log("¡Has encontrado al mago!");
+      // aquí luego emitirá evento
     });
 
-    // Zonas interactivas
-    const zones = [
-      {
-        x: 600,
-        y: 300,
-        data: {
-          id: "nopiques",
-          title: "NoPiques",
-          description:
-            "App que detecta posibles mensajes de phishing usando IA.",
-          link: "https://github.com/AlexHervas/NoPiques",
-        },
-      },
-      {
-        x: 400,
-        y: 400,
-        data: {
-          id: "wallaclone",
-          title: "Wallaclone",
-          description:
-            "Clon funcional de Wallapop con chat, login y panel de anuncios.",
-          link: "https://github.com/KeepcodersWeb17/wallaclone",
-        },
-      },
-      {
-        x: 200,
-        y: 300,
-        data: {
-          id: "portfolio",
-          title: "Este Portfolio",
-          description:
-            "Un portfolio interactivo gamificado hecho con React, Tailwind y Phaser.",
-          link: "https://github.com/AlexHervas/PhaserPortfolio",
-        },
-      },
-    ];
-
-    zones.forEach(({ x, y, data }) => {
-      const zone = this.physics.add.staticImage(x, y, "logo").setScale(0.2);
-      zone.refreshBody();
-      this.physics.add.overlap(
-        this.player,
-        zone,
-        () => {
-          this.onProjectTrigger(data);
-          zone.destroy();
-        },
-        undefined,
-        this
-      );
-    });
-
-    // Mago diálogo
-    this.physics.add.overlap(this.player, wizardZone, () => {
-      if (!this.dialogVisible) {
-        this.showDialog(
-          "🧙‍♂️ Bienvenido, viajero...\nEste mundo está hecho de código y creatividad."
-        );
-      }
-    });
+    // Input
+    this.cursors = this.input.keyboard?.createCursorKeys();
   }
 
   update() {
     if (!this.player || !this.cursors) return;
 
-    let velocityX = 0;
-    let velocityY = 0;
+    const speed = 90;
+    let vectorX = 0,
+      vectorY = 0;
 
     if (this.cursors.left?.isDown) {
-      velocityX = -160;
+      vectorX = -1;
       this.player.setFlipX(true);
-      this.player.setAngle(-5);
+      this.player.setAngle(-3);
     } else if (this.cursors.right?.isDown) {
-      velocityX = 160;
+      vectorX = 1;
       this.player.setFlipX(false);
-      this.player.setAngle(5);
-    } else {
-      this.player.setAngle(0);
+      this.player.setAngle(3);
     }
-
     if (this.cursors.up?.isDown) {
-      velocityY = -160;
-    } else if (this.cursors.down?.isDown) {
-      velocityY = 160;
+      vectorY = -1;
+      this.player.setAngle(2);
+    } else if (this.cursors.down?.isDown) vectorY = 1;
+    else {
+      if (vectorX === 0) this.player.setAngle(0);
     }
 
-    this.player.setVelocity(velocityX, velocityY);
-
-    if (this.dialogVisible && Phaser.Input.Keyboard.JustDown(this.spaceKey!)) {
-      this.hideDialog();
-    }
-  }
-
-  private showDialog(fullText: string) {
-    this.dialogVisible = true;
-    this.dialogBox.setVisible(true);
-    this.dialogText.setVisible(true);
-
-    this.continueHint.setVisible(false);
-    this.continueHintTween?.pause();
-
-    this.dialogText.setText("");
-    this.fullDialogText = fullText;
-    this.currentCharIndex = 0;
-
-    if (this.typingTimer) {
-      this.typingTimer.remove(false);
-    }
-
-    this.typingTimer = this.time.addEvent({
-      delay: 40,
-      repeat: fullText.length - 1,
-      callback: () => {
-        this.dialogText.text += this.fullDialogText[this.currentCharIndex];
-        this.currentCharIndex++;
-
-        // Detectar si se ha terminado de escribir
-        if (this.currentCharIndex >= this.fullDialogText.length) {
-          this.continueHint.setAlpha(1);
-          this.continueHint.setVisible(true);
-
-          // Reanudar el tween de parpadeo
-          if (this.continueHintTween) {
-            this.continueHintTween.play();
-          }
-        }
-      },
-      callbackScope: this,
-    });
-  }
-
-  private hideDialog() {
-    this.dialogBox.setVisible(false);
-    this.dialogText.setVisible(false);
-    this.dialogVisible = false;
-
-    this.continueHint.setVisible(false);
-    this.continueHintTween?.pause();
-
-    if (this.typingTimer) {
-      this.typingTimer.remove(false);
-    }
+    const vector = new Phaser.Math.Vector2(vectorX, vectorY)
+      .normalize()
+      .scale(speed);
+    this.player.setVelocity(vector.x, vector.y);
   }
 }
