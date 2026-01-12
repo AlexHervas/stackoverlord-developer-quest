@@ -5,6 +5,7 @@ import BootScene from "../game/BootScene";
 import MenuScene from "../game/MenuScene";
 import PlayScene from "../game/PlayScene";
 import Nivel2Scene from "../game/Nivel2Scene";
+import HubScene from "../game/HubScene";
 
 const BASE_WIDTH = 320;
 const BASE_HEIGHT = 160;
@@ -38,7 +39,7 @@ export default function GameCanvas() {
           gravity: { x: 0, y: 0 },
         },
       },
-      scene: [BootScene, MenuScene, PlayScene, Nivel2Scene],
+      scene: [BootScene, MenuScene, PlayScene, HubScene, Nivel2Scene],
     });
 
     return () => {

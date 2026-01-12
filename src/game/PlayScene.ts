@@ -7,6 +7,9 @@ export default class PlayScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private wizard!: Phaser.Physics.Arcade.Sprite;
+  private interactKey?: Phaser.Input.Keyboard.Key;
+  private talkingToMage: boolean = false;
+  private magePromptText?: Phaser.GameObjects.Text;
 
   constructor() {
     super("PlayScene");
@@ -82,12 +85,26 @@ export default class PlayScene extends Phaser.Scene {
 
     // Alcanzar al mago
     this.physics.add.overlap(this.player, this.wizard, () => {
-      console.log("¡Has encontrado al mago!");
-      // aquí luego emitirá evento
+      this.talkingToMage = true;
     });
 
     // Input
     this.cursors = this.input.keyboard?.createCursorKeys();
+
+    this.interactKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.E
+    );
+
+    this.magePromptText = this.add
+      .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, "Presiona E para interactuar", {
+        font: "10px monospace",
+        color: "#ffffff",
+        backgroundColor: "#000000",
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setVisible(false);
   }
 
   update() {
@@ -114,9 +131,28 @@ export default class PlayScene extends Phaser.Scene {
       if (vectorX === 0) this.player.setAngle(0);
     }
 
+    // Normalizar vector para evitar velocidad diagonal mayor
     const vector = new Phaser.Math.Vector2(vectorX, vectorY)
       .normalize()
       .scale(speed);
     this.player.setVelocity(vector.x, vector.y);
+
+    // Interacción con el mago, calcular distancia entre mago y player
+    const distanceToMage = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      this.wizard.x,
+      this.wizard.y
+    );
+
+    const TALK_DISTANCE = 18;
+    const nearMage = distanceToMage < TALK_DISTANCE;
+
+    this.magePromptText?.setVisible(nearMage);
+
+    if (nearMage && Phaser.Input.Keyboard.JustDown(this.interactKey!)) {
+      console.log("¡Hablando con el mago!");
+      this.scene.start("HubScene");
+    }
   }
 }
