@@ -8,7 +8,6 @@ export default class PlayScene extends Phaser.Scene {
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private wizard!: Phaser.Physics.Arcade.Sprite;
   private interactKey?: Phaser.Input.Keyboard.Key;
-  private talkingToMage: boolean = false;
   private magePromptText?: Phaser.GameObjects.Text;
 
   constructor() {
@@ -83,11 +82,6 @@ export default class PlayScene extends Phaser.Scene {
     this.physics.add.collider(this.player, wallsLayer);
     this.physics.add.collider(this.player, decorationLayer);
 
-    // Alcanzar al mago
-    this.physics.add.overlap(this.player, this.wizard, () => {
-      this.talkingToMage = true;
-    });
-
     // Input
     this.cursors = this.input.keyboard?.createCursorKeys();
 
@@ -110,7 +104,7 @@ export default class PlayScene extends Phaser.Scene {
   update() {
     if (!this.player || !this.cursors) return;
 
-    const speed = 90;
+    const SPEED = 90;
     let vectorX = 0,
       vectorY = 0;
 
@@ -134,7 +128,7 @@ export default class PlayScene extends Phaser.Scene {
     // Normalizar vector para evitar velocidad diagonal mayor
     const vector = new Phaser.Math.Vector2(vectorX, vectorY)
       .normalize()
-      .scale(speed);
+      .scale(SPEED);
     this.player.setVelocity(vector.x, vector.y);
 
     // Interacción con el mago, calcular distancia entre mago y player
