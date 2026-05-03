@@ -5,69 +5,137 @@ type PortfolioModalProps = {
   onClose: () => void;
 };
 
-const modalContent = {
+type ModalAction = {
+  label: string;
+  href: string;
+  download?: boolean;
+};
+
+type ModalSection = {
+  title: string;
+  items: string[];
+};
+
+type ModalProject = {
+  name: string;
+  description: string;
+  href: string;
+  stack: string;
+};
+
+type ModalContent = {
+  eyebrow: string;
+  title: string;
+  intro: string;
+  sections: ModalSection[];
+  actions?: ModalAction[];
+  projects?: ModalProject[];
+};
+
+const modalContent: Record<UiModal, ModalContent> = {
   cv: {
-    eyebrow: "Curriculum",
-    title: "CV de Alejandro",
+    eyebrow: "Pergamino de oficio",
+    title: "Alejandro Hervas Gonzalez",
     intro:
-      "Resumen profesional preparado para convertir esta sala del juego en una tarjeta interactiva de portfolio.",
+      "Desarrollador Web Full Stack. Puedes descargar el curriculum completo en PDF desde este pergamino.",
+    actions: [
+      {
+        label: "Descargar CV",
+        href: "/assets/cv/CV_Alejandro_Hervas_2025.pdf",
+        download: true,
+      },
+      {
+        label: "GitHub",
+        href: "https://github.com/AlexHervas",
+      },
+      {
+        label: "Email",
+        href: "mailto:stackoverlord.dev@gmail.com",
+      },
+    ],
     sections: [
       {
         title: "Perfil",
         items: [
-          "Desarrollador frontend con foco en experiencias web interactivas.",
-          "Trabajo con React, TypeScript, Vite y bases solidas de UI.",
-          "Interes en productos con una capa visual cuidada y usable.",
+          "Full stack formado en mayo de 2025 tras un bootcamp intensivo.",
+          "Experiencia practica en proyectos reales desde frontend hasta backend.",
+          "Perfil proactivo, resolutivo y acostumbrado a trabajar con atencion al detalle.",
         ],
       },
       {
-        title: "Stack",
-        items: ["React", "TypeScript", "Phaser", "Tailwind CSS", "Vite"],
+        title: "Stack principal",
+        items: [
+          "Frontend: HTML, CSS, JavaScript, React, Redux y Tailwind.",
+          "Backend: Node.js, Express, MongoDB, Mongoose, JWT y REST APIs.",
+          "Herramientas: Git, GitHub, Postman, Vite, Bun, Redis, WebSockets y OpenAI API.",
+        ],
       },
       {
-        title: "Siguiente paso",
+        title: "Formacion",
         items: [
-          "Sustituir este texto por experiencia real, enlaces y proyectos destacados.",
+          "Bootcamp Desarrollo Web Full Stack en KeepCoding.",
+          "Mas de 600 horas: arquitectura backend, despliegue, testing y metodologias agiles.",
+          "Ingles tecnico de lectura y carne de conducir B.",
         ],
       },
     ],
   },
   about: {
-    eyebrow: "Sobre mi",
-    title: "Quien hay detras del personaje",
+    eyebrow: "Bitacora personal",
+    title: "Sobre mi",
     intro:
-      "Un espacio para contar tu historia, tu forma de trabajar y que tipo de proyectos quieres construir.",
+      "En 2023 reoriente mi carrera hacia el desarrollo web. Empece con formacion autodidacta y despues di el salto a un bootcamp full stack para construir aplicaciones completas con una base solida.",
+    actions: [
+      {
+        label: "Perfil GitHub",
+        href: "https://github.com/AlexHervas",
+      },
+      {
+        label: "Contactar",
+        href: "mailto:stackoverlord.dev@gmail.com",
+      },
+    ],
     sections: [
       {
-        title: "Como trabajo",
+        title: "Quien soy",
         items: [
-          "Me gusta construir interfaces claras, rapidas y con personalidad.",
-          "Pienso en el producto desde la experiencia de quien lo usa.",
-          "Prefiero iterar con una base funcional antes que quedarme solo en ideas.",
+          "Desarrollador full stack junior con interes en producto, UI y experiencias interactivas.",
+          "Vengo de una etapa profesional donde desarrolle constancia, responsabilidad y trabajo bajo presion.",
+          "Me motiva construir proyectos completos y entender como encajan frontend, backend y despliegue.",
         ],
       },
       {
-        title: "Intereses",
+        title: "Lo que estoy construyendo",
         items: [
-          "Aplicaciones web",
-          "Juegos 2D",
-          "Animacion e interaccion",
-          "Portfolio narrativo",
+          "Aplicaciones con React y TypeScript.",
+          "Backends con Node.js, Express y MongoDB.",
+          "Herramientas con IA, tiempo real y una capa visual cuidada.",
         ],
       },
     ],
+    projects: [
+      {
+        name: "NoPiques",
+        description:
+          "Aplicacion para deteccion de phishing con IA, frontend en React y backend con Express.",
+        href: "https://github.com/AlexHervas/NoPiques",
+        stack: "TypeScript, React, Express, OpenAI API, Redis",
+      },
+      {
+        name: "Wallaclone",
+        description:
+          "Proyecto final conjunto de bootcamp: clon de Wallapop (funcionalidades) con anuncios, autenticacion y chat en tiempo real.",
+        href: "https://github.com/KeepcodersWeb17/wallaclone",
+        stack: "React, Redux, Node.js, Express, MongoDB, WebSockets",
+      },
+    ],
   },
-} satisfies Record<
-  UiModal,
-  {
-    eyebrow: string;
-    title: string;
-    intro: string;
-    sections: Array<{ title: string; items: string[] }>;
-  }
->;
+};
 
-export default function PortfolioModal({ modal, onClose }: PortfolioModalProps) {
+export default function PortfolioModal({
+  modal,
+  onClose,
+}: PortfolioModalProps) {
   const content = modalContent[modal];
 
   return (
@@ -121,6 +189,27 @@ export default function PortfolioModal({ modal, onClose }: PortfolioModalProps) 
             {content.intro}
           </p>
 
+          {content.actions && (
+            <div className="mb-5 flex flex-wrap gap-2">
+              {content.actions.map((action) => (
+                <a
+                  key={action.label}
+                  href={action.href}
+                  download={action.download}
+                  target={action.href.startsWith("http") ? "_blank" : undefined}
+                  rel={
+                    action.href.startsWith("http")
+                      ? "noreferrer noopener"
+                      : undefined
+                  }
+                  className="border-2 border-[#4f2d16] bg-[#8f4e22] px-3 py-2 font-mono text-xs font-black uppercase text-[#ffe7a2] shadow-[inset_0_2px_0_rgba(255,255,255,0.25),0_3px_0_#2f1d12] transition hover:bg-[#a85e2c] focus:outline-none focus:ring-2 focus:ring-[#2f1d12]"
+                >
+                  {action.label}
+                </a>
+              ))}
+            </div>
+          )}
+
           <div className="grid gap-4 md:grid-cols-2">
             {content.sections.map((section) => (
               <article
@@ -141,6 +230,35 @@ export default function PortfolioModal({ modal, onClose }: PortfolioModalProps) 
               </article>
             ))}
           </div>
+
+          {content.projects && (
+            <div className="mt-4 border-2 border-[#7a431f] bg-[#f7e3a6]/55 p-4">
+              <h3 className="mb-3 font-mono text-sm font-black uppercase text-[#5e3218]">
+                Proyectos enlazados
+              </h3>
+              <div className="grid gap-3">
+                {content.projects.map((project) => (
+                  <a
+                    key={project.name}
+                    href={project.href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="block border-2 border-[#8f4e22] bg-[#ffe8aa]/60 p-3 font-mono text-[#3d2818] transition hover:bg-[#fff0bd] focus:outline-none focus:ring-2 focus:ring-[#2f1d12]"
+                  >
+                    <span className="block text-sm font-black uppercase text-[#5e3218]">
+                      {project.name}
+                    </span>
+                    <span className="mt-1 block text-sm leading-5">
+                      {project.description}
+                    </span>
+                    <span className="mt-2 block text-xs font-bold text-[#7a431f]">
+                      {project.stack}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>
