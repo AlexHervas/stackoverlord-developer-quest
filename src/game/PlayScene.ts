@@ -2,6 +2,8 @@ import Phaser from "phaser";
 
 const ROOM_WIDTH = 320;
 const ROOM_HEIGHT = 160;
+const SPEED = 90;
+const TALK_DISTANCE = 18;
 
 export default class PlayScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -36,57 +38,32 @@ export default class PlayScene extends Phaser.Scene {
     const decorationLayer = map.createLayer("Decoration", tileset);
     if (!decorationLayer) throw new Error("Layer 'Decoration' no encontrada");
 
-    // Debug mapa
-    console.log("[MAP]", {
-      mapPixels: { w: map.widthInPixels, h: map.heightInPixels },
-      expected: { w: ROOM_WIDTH, h: ROOM_HEIGHT },
-      tileSize: { w: map.tileWidth, h: map.tileHeight },
-    });
-
-    /*
-      const collidingTiles = wallsLayer.filterTiles(
-      (tile: Phaser.Tilemaps.Tile) => {
-        const props = tile.properties as { collides?: boolean };
-        return props.collides === true;
-      }
-    );
-      console.log("Colliding tiles count:", collidingTiles.length);
-    */
-
     wallsLayer.setCollisionByProperty({ collides: true });
     decorationLayer.setCollisionByProperty({ collides: true });
 
-    // Límites fijos de room
     this.physics.world.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
 
-    // Cámara
     const cam = this.cameras.main;
     cam.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     cam.roundPixels = true;
     cam.stopFollow();
     cam.centerOn(ROOM_WIDTH / 2, ROOM_HEIGHT / 2);
 
-    // Player centrado de la sala
     this.player = this.physics.add
       .sprite(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, "playerSprite")
       .setScale(1);
-
     this.player.setCollideWorldBounds(true);
 
-    // NPC quieto (mago)
     this.wizard = this.physics.add
       .staticSprite(ROOM_WIDTH / 2 + 150, ROOM_HEIGHT / 2 + 40, "wizard")
       .setScale(1);
 
-    // Colisiones
     this.physics.add.collider(this.player, wallsLayer);
     this.physics.add.collider(this.player, decorationLayer);
 
-    // Input
     this.cursors = this.input.keyboard?.createCursorKeys();
-
     this.interactKey = this.input.keyboard!.addKey(
-      Phaser.Input.Keyboard.KeyCodes.E
+      Phaser.Input.Keyboard.KeyCodes.E,
     );
 
     this.magePromptText = this.add
@@ -104,9 +81,8 @@ export default class PlayScene extends Phaser.Scene {
   update() {
     if (!this.player || !this.cursors) return;
 
-    const SPEED = 90;
-    let vectorX = 0,
-      vectorY = 0;
+    let vectorX = 0;
+    let vectorY = 0;
 
     if (this.cursors.left?.isDown) {
       vectorX = -1;
@@ -117,35 +93,32 @@ export default class PlayScene extends Phaser.Scene {
       this.player.setFlipX(false);
       this.player.setAngle(3);
     }
+
     if (this.cursors.up?.isDown) {
       vectorY = -1;
       this.player.setAngle(2);
-    } else if (this.cursors.down?.isDown) vectorY = 1;
-    else {
-      if (vectorX === 0) this.player.setAngle(0);
+    } else if (this.cursors.down?.isDown) {
+      vectorY = 1;
+    } else if (vectorX === 0) {
+      this.player.setAngle(0);
     }
 
-    // Normalizar vector para evitar velocidad diagonal mayor
     const vector = new Phaser.Math.Vector2(vectorX, vectorY)
       .normalize()
       .scale(SPEED);
     this.player.setVelocity(vector.x, vector.y);
 
-    // Interacción con el mago, calcular distancia entre mago y player
     const distanceToMage = Phaser.Math.Distance.Between(
       this.player.x,
       this.player.y,
       this.wizard.x,
-      this.wizard.y
+      this.wizard.y,
     );
 
-    const TALK_DISTANCE = 18;
     const nearMage = distanceToMage < TALK_DISTANCE;
-
     this.magePromptText?.setVisible(nearMage);
 
     if (nearMage && Phaser.Input.Keyboard.JustDown(this.interactKey!)) {
-      console.log("¡Hablando con el mago!");
       this.scene.start("HubScene", { spawn: "default" });
     }
   }

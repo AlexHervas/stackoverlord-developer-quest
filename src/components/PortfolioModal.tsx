@@ -75,7 +75,7 @@ const modalContent: Record<UiModal, ModalContent> = {
         items: [
           "Bootcamp Desarrollo Web Full Stack en KeepCoding.",
           "Mas de 600 horas: arquitectura backend, despliegue, testing y metodologias agiles.",
-          "Ingles tecnico de lectura y carne de conducir B.",
+          "Ingles nivel B1.",
         ],
       },
     ],

@@ -32,7 +32,7 @@ export default class HubScene extends Phaser.Scene {
   }
 
   preload() {
-    // Si ya cacheas esto en otra escena no pasa nada
+    // Si ya cacheas esto en otra escena no pasa nada.
     this.load.image("tiles_image", "assets/tilemap.png");
     this.load.tilemapTiledJSON("lvl2", "assets/lvl2.json");
     this.load.image("playerSprite", "assets/player.png");
@@ -40,12 +40,10 @@ export default class HubScene extends Phaser.Scene {
     // Placeholder NPC. Luego podrás sustituir por sprites distintos.
     this.load.image("wizard", "assets/wizard.png");
 
-    // Sonidos
     this.load.audio("interactSound", "assets/audio/select_001.ogg");
   }
 
   create() {
-    // --- MAPA ---
     const map = this.make.tilemap({ key: "lvl2" });
     const tileset = map.addTilesetImage("tiles_level2", "tiles_image");
     if (!tileset) throw new Error("Tileset no encontrado");
@@ -60,7 +58,6 @@ export default class HubScene extends Phaser.Scene {
     wallsLayer.setCollisionByProperty({ collides: true });
     decorationLayer.setCollisionByProperty({ collides: true });
 
-    // --- ROOM BOUNDS ---
     this.physics.world.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
 
     const cam = this.cameras.main;
@@ -69,7 +66,6 @@ export default class HubScene extends Phaser.Scene {
     cam.stopFollow();
     cam.centerOn(ROOM_WIDTH / 2, ROOM_HEIGHT / 2);
 
-    // --- UI: Título ---
     this.add
       .text(8, 6, "HUB", {
         fontSize: "12px",
@@ -85,20 +81,17 @@ export default class HubScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setScrollFactor(0);
 
-    // --- PLAYER ---
     const spawnPoint = this.getPlayerSpawn();
     this.spawn = "default";
     this.player = this.physics.add
       .sprite(spawnPoint.x, spawnPoint.y, "playerSprite")
       .setScale(1);
     this.player.setFlipX(spawnPoint.flipX);
-
     this.player.setCollideWorldBounds(true);
 
     this.physics.add.collider(this.player, wallsLayer);
     this.physics.add.collider(this.player, decorationLayer);
 
-    // --- INPUT ---
     this.cursors = this.input.keyboard?.createCursorKeys();
     this.interactKey = this.input.keyboard!.addKey(
       Phaser.Input.Keyboard.KeyCodes.E,
@@ -107,7 +100,6 @@ export default class HubScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.ESC,
     );
 
-    // Prompt
     this.promptText = this.add
       .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, "Pulsa E", {
         fontSize: "10px",
@@ -119,7 +111,6 @@ export default class HubScene extends Phaser.Scene {
       .setVisible(false)
       .setScrollFactor(0);
 
-    // --- NPCs (hardcode) ---
     this.npcCv = this.physics.add.staticSprite(70, 60, "wizard").setScale(1);
     this.npcAbout = this.physics.add
       .staticSprite(160, 60, "wizard")
@@ -138,9 +129,8 @@ export default class HubScene extends Phaser.Scene {
   update() {
     if (!this.player || !this.cursors) return;
 
-    // --- MOVIMIENTO ---
-    let vx = 0,
-      vy = 0;
+    let vx = 0;
+    let vy = 0;
 
     if (this.cursors.left?.isDown) {
       vx = -1;
@@ -155,11 +145,10 @@ export default class HubScene extends Phaser.Scene {
 
     this.player.setAngle(vx === 0 ? 0 : vx < 0 ? -3 : 3);
 
-    const v = new Phaser.Math.Vector2(vx, vy);
-    if (v.lengthSq() > 0) v.normalize().scale(SPEED);
-    this.player.setVelocity(v.x, v.y);
+    const velocity = new Phaser.Math.Vector2(vx, vy);
+    if (velocity.lengthSq() > 0) velocity.normalize().scale(SPEED);
+    this.player.setVelocity(velocity.x, velocity.y);
 
-    // --- SALIR / VOLVER ---
     if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
       this.cameras.main.fadeOut(250, 0, 0, 0);
 
@@ -173,16 +162,14 @@ export default class HubScene extends Phaser.Scene {
       return;
     }
 
-    // --- INTERACCIÓN POR DISTANCIA (no overlap) ---
     const action = this.getNearestNpcAction();
-
     this.promptText?.setVisible(action !== null);
 
     if (action && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       if (this.cache.audio.exists("interactSound")) {
         this.sound.play("interactSound", { volume: 0.2 });
       }
-      // Una sola pulsación -> una acción
+
       if (action === "cv") {
         eventBus.emit("ui:open", { modal: "cv" });
       } else if (action === "about") {
@@ -216,7 +203,6 @@ export default class HubScene extends Phaser.Scene {
       this.npcCombat.y,
     );
 
-    // Encuentra el mínimo
     let min = dCv;
     let action: HubAction = "cv";
 

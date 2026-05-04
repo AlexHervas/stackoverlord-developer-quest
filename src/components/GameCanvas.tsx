@@ -4,7 +4,6 @@ import Phaser from "phaser";
 import BootScene from "../game/BootScene";
 import MenuScene from "../game/MenuScene";
 import PlayScene from "../game/PlayScene";
-import Nivel2Scene from "../game/Nivel2Scene";
 import HubScene from "../game/HubScene";
 import CombatScene from "../game/CombatScene";
 import { eventBus, type UiModal } from "../game/events/events";
@@ -43,7 +42,7 @@ export default function GameCanvas() {
           gravity: { x: 0, y: 0 },
         },
       },
-      scene: [BootScene, MenuScene, PlayScene, HubScene, CombatScene, Nivel2Scene],
+      scene: [BootScene, MenuScene, PlayScene, HubScene, CombatScene],
     });
 
     return () => {
