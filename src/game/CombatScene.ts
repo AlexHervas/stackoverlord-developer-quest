@@ -67,6 +67,8 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   preload() {
+    this.load.image("combatTiles", "assets/tilemap.png");
+    this.load.tilemapTiledJSON("combatArena", "assets/combatArena.json");
     this.load.image("playerSprite", "assets/player.png");
     this.load.image("wizard", "assets/wizard.png");
   }
@@ -99,30 +101,21 @@ export default class CombatScene extends Phaser.Scene {
     cam.roundPixels = true;
     cam.centerOn(ARENA_WIDTH / 2, ARENA_HEIGHT / 2);
 
-    this.add.rectangle(
-      ARENA_WIDTH / 2,
-      ARENA_HEIGHT / 2,
-      ARENA_WIDTH,
-      ARENA_HEIGHT,
-      0x22150f,
-    );
-    this.add.rectangle(
-      ARENA_WIDTH / 2,
-      ARENA_HEIGHT / 2 + 10,
-      ARENA_WIDTH - 24,
-      ARENA_HEIGHT - 48,
-      0x6f3f1e,
-    );
-    this.add.rectangle(
-      ARENA_WIDTH / 2,
-      ARENA_HEIGHT / 2 + 10,
-      ARENA_WIDTH - 34,
-      ARENA_HEIGHT - 58,
-      0xb36a2e,
-    );
+    const map = this.make.tilemap({ key: "combatArena" });
+    const tileset = map.addTilesetImage("combat_tiles", "combatTiles");
+    if (!tileset) throw new Error("Tileset de arena no encontrado");
+
+    const groundLayer = map.createLayer("Ground", tileset);
+    const wallsLayer = map.createLayer("Walls", tileset);
+    const decorationLayer = map.createLayer("Decoration", tileset);
+    if (!groundLayer || !wallsLayer || !decorationLayer) {
+      throw new Error("Faltan capas en combatArena.json");
+    }
+
+    wallsLayer.setCollisionByProperty({ collides: true });
 
     this.add
-      .text(8, 6, "ARENA", {
+      .text(4, 2, "ARENA", {
         fontFamily: "monospace",
         fontSize: TITLE_FONT,
         color: "#ffe7a2",
@@ -130,21 +123,12 @@ export default class CombatScene extends Phaser.Scene {
       .setScrollFactor(0);
 
     this.add
-      .text(ARENA_WIDTH / 2, 8, "RONDA 1", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.45)",
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(0.5, 0)
-      .setScrollFactor(0);
-
-    this.add
-      .text(ARENA_WIDTH - 8, 6, "ESP:ATK ESC:HUB", {
+      .text(ARENA_WIDTH - 4, 2, "ESP: ATTACK | ESC: HUB", {
         fontFamily: "monospace",
         fontSize: UI_FONT,
         color: "#05F521",
+        backgroundColor: "rgba(0,0,0,0.72)",
+        padding: { x: 4, y: 2 },
       })
       .setOrigin(1, 0)
       .setScrollFactor(0);
@@ -155,6 +139,8 @@ export default class CombatScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
 
     this.enemies = this.physics.add.group();
+    this.physics.add.collider(this.player, wallsLayer);
+    this.physics.add.collider(this.enemies, wallsLayer);
     this.physics.add.overlap(
       this.player,
       this.enemies,
