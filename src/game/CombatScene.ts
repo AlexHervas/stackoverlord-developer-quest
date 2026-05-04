@@ -4,7 +4,7 @@ const ARENA_WIDTH = 320;
 const ARENA_HEIGHT = 160;
 const SPEED = 95;
 const ENEMY_SPEED = 34;
-const ATTACK_RANGE = 30;
+const ATTACK_RANGE = 34;
 const ATTACK_COOLDOWN = 320;
 const DAMAGE_COOLDOWN = 900;
 const MAX_NAME_LENGTH = 10;
@@ -46,10 +46,12 @@ export default class CombatScene extends Phaser.Scene {
   private isGameOver = false;
   private isEnteringName = false;
   private kills = 0;
-  private startedAt = 0;
+  private activeStartedAt = 0;
+  private activeElapsedMs = 0;
   private finalScore = 0;
   private finalSeconds = 0;
   private nameDraft = "";
+  private facing = new Phaser.Math.Vector2(1, 0);
 
   private roundText!: Phaser.GameObjects.Text;
   private healthText!: Phaser.GameObjects.Text;
@@ -78,10 +80,12 @@ export default class CombatScene extends Phaser.Scene {
     this.isGameOver = false;
     this.isEnteringName = false;
     this.kills = 0;
-    this.startedAt = this.time.now;
+    this.activeStartedAt = Date.now();
+    this.activeElapsedMs = 0;
     this.finalScore = 0;
     this.finalSeconds = 0;
     this.nameDraft = "";
+    this.facing.set(1, 0);
 
     this.physics.world.setBounds(
       ARENA_BOUNDS.x,
@@ -266,8 +270,15 @@ export default class CombatScene extends Phaser.Scene {
       .setDepth(20);
 
     this.input.keyboard?.on("keydown", this.handleNameInput, this);
+    window.addEventListener("blur", this.handleWindowBlur);
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off("keydown", this.handleNameInput, this);
+      window.removeEventListener("blur", this.handleWindowBlur);
+      document.removeEventListener(
+        "visibilitychange",
+        this.handleVisibilityChange,
+      );
     });
 
     this.startRound();
@@ -302,6 +313,10 @@ export default class CombatScene extends Phaser.Scene {
 
     if (this.cursors.up?.isDown) vy = -1;
     else if (this.cursors.down?.isDown) vy = 1;
+
+    if (vx !== 0 || vy !== 0) {
+      this.facing.set(vx, vy).normalize();
+    }
 
     this.player.setAngle(vx === 0 ? 0 : vx < 0 ? -3 : 3);
 
@@ -378,34 +393,27 @@ export default class CombatScene extends Phaser.Scene {
     if (this.time.now - this.lastAttackAt < ATTACK_COOLDOWN) return;
 
     this.lastAttackAt = this.time.now;
-    const slash = this.add.circle(
-      this.player.x,
-      this.player.y,
-      ATTACK_RANGE,
-      0xffe7a2,
-      0.18,
-    );
-    slash.setStrokeStyle(2, 0xffffff, 0.65);
+    const attackCenter = this.getAttackCenter();
+    const slash = this.createSlashEffect(this.player.x, this.player.y);
 
     this.tweens.add({
       targets: slash,
       alpha: 0,
-      scale: 1.25,
-      duration: 160,
+      scale: 1.08,
+      duration: 150,
       onComplete: () => slash.destroy(),
     });
 
     this.getActiveEnemies().forEach((enemy) => {
       const distance = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
+        attackCenter.x,
+        attackCenter.y,
         enemy.x,
         enemy.y,
       );
 
-      if (distance <= ATTACK_RANGE) {
-        this.kills += 1;
-        enemy.destroy();
+      if (distance <= ATTACK_RANGE / 2 + 8) {
+        this.defeatEnemy(enemy);
       }
     });
 
@@ -419,11 +427,7 @@ export default class CombatScene extends Phaser.Scene {
     this.lastDamageAt = this.time.now;
     this.health -= 1;
     this.cameras.main.shake(90, 0.008);
-    this.player.setTint(0xff6b6b);
-
-    this.time.delayedCall(160, () => {
-      if (this.player.active) this.player.clearTint();
-    });
+    this.startPlayerInvulnerabilityFeedback();
 
     if (this.health <= 0) {
       this.endGame();
@@ -431,6 +435,95 @@ export default class CombatScene extends Phaser.Scene {
 
     this.updateHud();
   };
+
+  private getAttackCenter() {
+    return {
+      x: this.player.x + this.facing.x * 14,
+      y: this.player.y + this.facing.y * 14,
+    };
+  }
+
+  private createSlashEffect(x: number, y: number) {
+    const slash = this.add.container(x, y).setDepth(5);
+    const arc = this.add.graphics();
+    const angle = Math.atan2(this.facing.y, this.facing.x);
+    const startAngle = -Math.PI / 3.2;
+    const endAngle = Math.PI / 3.2;
+    const radius = 16;
+    const outerRadius = 19;
+    const steps = 6;
+
+    arc.x = this.facing.x * 6;
+    arc.y = this.facing.y * 6;
+    arc.rotation = angle;
+    slash.add(arc);
+
+    for (let step = 1; step <= steps; step += 1) {
+      this.time.delayedCall((step - 1) * 18, () => {
+        if (!arc.active) return;
+
+        const progress = step / steps;
+        const currentEnd = Phaser.Math.Linear(startAngle, endAngle, progress);
+        arc.clear();
+
+        arc.lineStyle(4, 0xffe7a2, 0.34);
+        arc.beginPath();
+        arc.arc(0, 0, radius, startAngle, currentEnd);
+        arc.strokePath();
+
+        arc.lineStyle(2, 0xffffff, 0.82);
+        arc.beginPath();
+        arc.arc(0, 0, outerRadius, startAngle, currentEnd);
+        arc.strokePath();
+      });
+    }
+
+    return slash;
+  }
+
+  private defeatEnemy(enemy: Phaser.Physics.Arcade.Sprite) {
+    if (!enemy.active) return;
+
+    this.kills += 1;
+    enemy.disableBody(false, false);
+    enemy.setTint(0xffffff);
+    enemy.setDepth(4);
+
+    const knockback = new Phaser.Math.Vector2(
+      enemy.x - this.player.x,
+      enemy.y - this.player.y,
+    );
+
+    if (knockback.lengthSq() === 0) knockback.copy(this.facing);
+    knockback.normalize().scale(14);
+
+    this.tweens.add({
+      targets: enemy,
+      x: enemy.x + knockback.x,
+      y: enemy.y + knockback.y,
+      alpha: 0,
+      scale: 1.2,
+      duration: 130,
+      onComplete: () => enemy.destroy(),
+    });
+  }
+
+  private startPlayerInvulnerabilityFeedback() {
+    this.player.setTint(0xff6b6b);
+
+    this.tweens.add({
+      targets: this.player,
+      alpha: 0.35,
+      duration: 80,
+      yoyo: true,
+      repeat: 5,
+      onComplete: () => {
+        if (!this.player.active) return;
+        this.player.setAlpha(1);
+        this.player.clearTint();
+      },
+    });
+  }
 
   private checkRoundComplete() {
     if (this.isChangingRound || this.enemies.countActive(true) > 0) return;
@@ -506,8 +599,42 @@ export default class CombatScene extends Phaser.Scene {
 
   private getSurvivedSeconds() {
     if (this.isGameOver) return this.finalSeconds;
-    return Math.floor((this.time.now - this.startedAt) / 1000);
+    return Math.floor(this.getActiveElapsedMs() / 1000);
   }
+
+  private getActiveElapsedMs() {
+    if (this.isGameOver) return this.finalSeconds * 1000;
+    if (this.scene.isPaused()) return this.activeElapsedMs;
+    return this.activeElapsedMs + Date.now() - this.activeStartedAt;
+  }
+
+  private pauseCombatTimer() {
+    if (this.isGameOver || this.scene.isPaused()) return;
+
+    this.activeElapsedMs += Date.now() - this.activeStartedAt;
+    this.player?.setVelocity(0, 0);
+    this.getActiveEnemies().forEach((enemy) => enemy.setVelocity(0, 0));
+    this.scene.pause();
+  }
+
+  private resumeCombatTimer() {
+    if (this.isGameOver || !this.scene.isPaused()) return;
+
+    this.activeStartedAt = Date.now();
+    this.scene.resume();
+  }
+
+  private handleWindowBlur = () => {
+    this.pauseCombatTimer();
+  };
+
+  private handleVisibilityChange = () => {
+    if (document.hidden) {
+      this.pauseCombatTimer();
+    } else {
+      this.resumeCombatTimer();
+    }
+  };
 
   private handleNameInput(event: KeyboardEvent) {
     if (!this.isEnteringName) return;
