@@ -119,6 +119,10 @@ export default class HubScene extends Phaser.Scene {
       .staticSprite(250, 60, "wizard")
       .setScale(1);
 
+    this.addNpcLabel(this.npcCv, "CV");
+    this.addNpcLabel(this.npcAbout, "ABOUT");
+    this.addNpcLabel(this.npcCombat, "ARENA");
+
     this.cameras.main.fadeIn(250, 0, 0, 0);
   }
 
@@ -174,7 +178,7 @@ export default class HubScene extends Phaser.Scene {
       } else if (action === "about") {
         eventBus.emit("ui:open", { modal: "about" });
       } else if (action === "combat") {
-        this.showToast("⚔️ Combate (próximo: escena)");
+        this.scene.start("CombatScene");
       }
     }
   }
@@ -218,23 +222,14 @@ export default class HubScene extends Phaser.Scene {
     return min <= TALK_RANGE ? action : null;
   }
 
-  private showToast(text: string) {
-    // micro feedback presentable (sin logs)
-    const toast = this.add
-      .text(ROOM_WIDTH / 2, 20, text, {
-        fontSize: "10px",
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.6)",
-        padding: { x: 6, y: 3 },
+  private addNpcLabel(npc: Phaser.Physics.Arcade.Sprite, text: string) {
+    this.add
+      .text(npc.x, npc.y - 20, text, {
+        fontSize: "8px",
+        color: "#ffe7a2",
+        backgroundColor: "rgba(0,0,0,0.55)",
+        padding: { x: 3, y: 1 },
       })
       .setOrigin(0.5);
-
-    this.tweens.add({
-      targets: toast,
-      alpha: 0,
-      duration: 900,
-      delay: 600,
-      onComplete: () => toast.destroy(),
-    });
   }
 }
