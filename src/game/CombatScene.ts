@@ -574,7 +574,7 @@ export default class CombatScene extends Phaser.Scene {
     this.cameras.main.once(
       Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
       () => {
-        this.scene.start("HubScene");
+        this.scene.start("HubScene", { spawn: "arena" });
       },
     );
   }

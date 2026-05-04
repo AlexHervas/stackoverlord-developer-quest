@@ -7,6 +7,7 @@ const SPEED = 90;
 const TALK_RANGE = 18;
 
 type HubAction = "cv" | "about" | "combat";
+type HubSpawn = "default" | "arena";
 
 export default class HubScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -20,9 +21,14 @@ export default class HubScene extends Phaser.Scene {
   private npcCv!: Phaser.Physics.Arcade.Sprite;
   private npcAbout!: Phaser.Physics.Arcade.Sprite;
   private npcCombat!: Phaser.Physics.Arcade.Sprite;
+  private spawn: HubSpawn = "default";
 
   constructor() {
     super("HubScene");
+  }
+
+  init(data?: { spawn?: HubSpawn }) {
+    this.spawn = data?.spawn ?? "default";
   }
 
   preload() {
@@ -80,9 +86,12 @@ export default class HubScene extends Phaser.Scene {
       .setScrollFactor(0);
 
     // --- PLAYER ---
+    const spawnPoint = this.getPlayerSpawn();
+    this.spawn = "default";
     this.player = this.physics.add
-      .sprite(ROOM_WIDTH / 2, ROOM_HEIGHT - 40, "playerSprite")
+      .sprite(spawnPoint.x, spawnPoint.y, "playerSprite")
       .setScale(1);
+    this.player.setFlipX(spawnPoint.flipX);
 
     this.player.setCollideWorldBounds(true);
 
@@ -157,6 +166,7 @@ export default class HubScene extends Phaser.Scene {
       this.cameras.main.once(
         Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
         () => {
+          this.spawn = "default";
           this.scene.start("PlayScene");
         },
       );
@@ -231,5 +241,21 @@ export default class HubScene extends Phaser.Scene {
         padding: { x: 3, y: 1 },
       })
       .setOrigin(0.5);
+  }
+
+  private getPlayerSpawn() {
+    if (this.spawn === "arena") {
+      return {
+        x: 250,
+        y: 88,
+        flipX: true,
+      };
+    }
+
+    return {
+      x: ROOM_WIDTH / 2,
+      y: ROOM_HEIGHT - 40,
+      flipX: false,
+    };
   }
 }

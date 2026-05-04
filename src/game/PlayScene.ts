@@ -146,7 +146,7 @@ export default class PlayScene extends Phaser.Scene {
 
     if (nearMage && Phaser.Input.Keyboard.JustDown(this.interactKey!)) {
       console.log("¡Hablando con el mago!");
-      this.scene.start("HubScene");
+      this.scene.start("HubScene", { spawn: "default" });
     }
   }
 }
