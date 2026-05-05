@@ -5,6 +5,22 @@ const ROOM_WIDTH = 320;
 const ROOM_HEIGHT = 160;
 const SPEED = 90;
 const TALK_RANGE = 18;
+const UI_FONT = "10px";
+const TITLE_FONT = "12px";
+const UI_STYLE = {
+  fontFamily: "monospace",
+  fontSize: UI_FONT,
+  color: "#ffffff",
+  backgroundColor: "rgba(0,0,0,0.72)",
+  padding: { x: 4, y: 2 },
+};
+const TITLE_STYLE = {
+  fontFamily: "monospace",
+  fontSize: TITLE_FONT,
+  color: "#ffe7a2",
+  backgroundColor: "rgba(0,0,0,0.72)",
+  padding: { x: 4, y: 2 },
+};
 
 type HubAction = "cv" | "about" | "combat";
 type HubSpawn = "default" | "arena";
@@ -37,8 +53,9 @@ export default class HubScene extends Phaser.Scene {
     this.load.tilemapTiledJSON("lvl2", "assets/lvl2.json");
     this.load.image("playerSprite", "assets/player.png");
 
-    // Placeholder NPC. Luego podrás sustituir por sprites distintos.
-    this.load.image("wizard", "assets/wizard.png");
+    this.load.image("cvNpc", "assets/cv_npc.png");
+    this.load.image("aboutNpc", "assets/about_npc.png");
+    this.load.image("arenaNpc", "assets/arena_npc.png");
 
     this.load.audio("interactSound", "assets/audio/select_001.ogg");
   }
@@ -66,20 +83,16 @@ export default class HubScene extends Phaser.Scene {
     cam.stopFollow();
     cam.centerOn(ROOM_WIDTH / 2, ROOM_HEIGHT / 2);
 
-    this.add
-      .text(8, 6, "HUB", {
-        fontSize: "12px",
-        color: "#ffffff",
-      })
-      .setScrollFactor(0);
+    this.add.text(4, 2, "HUB", TITLE_STYLE).setScrollFactor(0).setDepth(20);
 
     this.add
-      .text(ROOM_WIDTH - 8, 6, "ESC: volver", {
-        fontSize: "10px",
+      .text(ROOM_WIDTH - 4, 2, "ESC: VOLVER", {
+        ...UI_STYLE,
         color: "#05F521",
       })
       .setOrigin(1, 0)
-      .setScrollFactor(0);
+      .setScrollFactor(0)
+      .setDepth(20);
 
     const spawnPoint = this.getPlayerSpawn();
     this.spawn = "default";
@@ -102,21 +115,19 @@ export default class HubScene extends Phaser.Scene {
 
     this.promptText = this.add
       .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, "Pulsa E", {
-        fontSize: "10px",
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.6)",
-        padding: { x: 4, y: 2 },
+        ...UI_STYLE,
       })
       .setOrigin(0.5)
       .setVisible(false)
-      .setScrollFactor(0);
+      .setScrollFactor(0)
+      .setDepth(20);
 
-    this.npcCv = this.physics.add.staticSprite(70, 60, "wizard").setScale(1);
+    this.npcCv = this.physics.add.staticSprite(56, 75, "cvNpc").setScale(1);
     this.npcAbout = this.physics.add
-      .staticSprite(160, 60, "wizard")
+      .staticSprite(136, 86, "aboutNpc")
       .setScale(1);
     this.npcCombat = this.physics.add
-      .staticSprite(250, 60, "wizard")
+      .staticSprite(230, 40, "arenaNpc")
       .setScale(1);
 
     this.addNpcLabel(this.npcCv, "CV");
@@ -221,25 +232,27 @@ export default class HubScene extends Phaser.Scene {
   private addNpcLabel(npc: Phaser.Physics.Arcade.Sprite, text: string) {
     this.add
       .text(npc.x, npc.y - 20, text, {
+        fontFamily: "monospace",
         fontSize: "8px",
-        color: "#ffe7a2",
-        backgroundColor: "rgba(0,0,0,0.55)",
-        padding: { x: 3, y: 1 },
+        color: "#fff4bf",
+        backgroundColor: "rgba(0,0,0,0.72)",
+        padding: { x: 4, y: 2 },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(10);
   }
 
   private getPlayerSpawn() {
     if (this.spawn === "arena") {
       return {
         x: 250,
-        y: 88,
+        y: 40,
         flipX: true,
       };
     }
 
     return {
-      x: ROOM_WIDTH / 2,
+      x: 0,
       y: ROOM_HEIGHT - 40,
       flipX: false,
     };
