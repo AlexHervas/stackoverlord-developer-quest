@@ -1,25 +1,9 @@
 import Phaser from "phaser";
-
-type CombatHudConfig = {
-  arenaWidth: number;
-  arenaHeight: number;
-  titleFont: string;
-  uiFont: string;
-};
-
-export type CombatHudTexts = {
-  roundText: Phaser.GameObjects.Text;
-  healthText: Phaser.GameObjects.Text;
-  enemiesText: Phaser.GameObjects.Text;
-  scoreText: Phaser.GameObjects.Text;
-};
-
-export type CombatOverlayTexts = {
-  messageText: Phaser.GameObjects.Text;
-  rankingText: Phaser.GameObjects.Text;
-  nameInputText: Phaser.GameObjects.Text;
-  controlsText: Phaser.GameObjects.Text;
-};
+import type {
+  CombatHudConfig,
+  CombatHudTexts,
+  CombatOverlayTexts,
+} from "./types";
 
 export function createStaticTexts(
   scene: Phaser.Scene,

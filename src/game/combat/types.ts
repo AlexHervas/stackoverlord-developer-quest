@@ -1,3 +1,5 @@
+import type Phaser from "phaser";
+
 export type RankingEntry = {
   playerId?: string;
   name: string;
@@ -11,4 +13,25 @@ export type RankingEntry = {
 export type SpawnPoint = {
   x: number;
   y: number;
+};
+
+export type CombatHudConfig = {
+  arenaWidth: number;
+  arenaHeight: number;
+  titleFont: string;
+  uiFont: string;
+};
+
+export type CombatHudTexts = {
+  roundText: Phaser.GameObjects.Text;
+  healthText: Phaser.GameObjects.Text;
+  enemiesText: Phaser.GameObjects.Text;
+  scoreText: Phaser.GameObjects.Text;
+};
+
+export type CombatOverlayTexts = {
+  messageText: Phaser.GameObjects.Text;
+  rankingText: Phaser.GameObjects.Text;
+  nameInputText: Phaser.GameObjects.Text;
+  controlsText: Phaser.GameObjects.Text;
 };
