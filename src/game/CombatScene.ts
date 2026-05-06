@@ -752,13 +752,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private showRanking(footer: string) {
     const ranking = this.loadRanking();
-    const rows =
-      ranking.length > 0
-        ? ranking.map((entry, index) => {
-            const position = String(index + 1).padStart(2, "0");
-            return `${position} ${entry.name.padEnd(10, " ")} ${entry.score}`;
-          })
-        : ["SIN RECORDS TODAVIA"];
+    const rows = this.formatRankingRows(ranking);
 
     this.rankingText
       .setText([
@@ -778,21 +772,30 @@ export default class CombatScene extends Phaser.Scene {
     try {
       const ranking = JSON.parse(rawRanking) as RankingEntry[];
       if (!Array.isArray(ranking)) return [];
-      return ranking
-        .filter((entry) => {
-          return (
-            typeof entry.name === "string" &&
-            typeof entry.score === "number" &&
-            typeof entry.round === "number" &&
-            typeof entry.kills === "number" &&
-            typeof entry.seconds === "number" &&
-            typeof entry.date === "string"
-          );
-        })
-        .slice(0, 10);
+      return ranking.filter(this.isRankingEntry).slice(0, 10);
     } catch {
       return [];
     }
+  }
+
+  private formatRankingRows(ranking: RankingEntry[]) {
+    if (ranking.length === 0) return ["SIN RECORDS TODAVIA"];
+
+    return ranking.map((entry, index) => {
+      const position = String(index + 1).padStart(2, "0");
+      return `${position} ${entry.name.padEnd(10, " ")} ${entry.score}`;
+    });
+  }
+
+  private isRankingEntry(entry: RankingEntry) {
+    return (
+      typeof entry.name === "string" &&
+      typeof entry.score === "number" &&
+      typeof entry.round === "number" &&
+      typeof entry.kills === "number" &&
+      typeof entry.seconds === "number" &&
+      typeof entry.date === "string"
+    );
   }
 
   private getBestScore() {
