@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import type { RankingEntry, SpawnPoint } from "./combat/types";
 
 const ARENA_WIDTH = 320;
 const ARENA_HEIGHT = 160;
@@ -58,16 +59,6 @@ const ARENA_BOUNDS = {
   y: 24,
   width: ARENA_WIDTH - 24,
   height: ARENA_HEIGHT - 36,
-};
-
-type RankingEntry = {
-  playerId?: string;
-  name: string;
-  score: number;
-  round: number;
-  kills: number;
-  seconds: number;
-  date: string;
 };
 
 export default class CombatScene extends Phaser.Scene {
@@ -390,7 +381,7 @@ export default class CombatScene extends Phaser.Scene {
     }
   }
 
-  private getSpawnPoint(index: number) {
+  private getSpawnPoint(index: number): SpawnPoint {
     const positions = [
       {
         x: ARENA_BOUNDS.x + ENEMY_SPAWN_MARGIN,
