@@ -46,6 +46,8 @@ The portfolio is structured as a small game. The player moves through scenes, in
 ## CombatScene rules
 
 - CombatScene currently works and should not be behaviorally rewritten.
+- Stable refactor checkpoint: `5702847 refactor: isolate combat player movement`.
+- Changes up to that commit were manually tested and preserved current gameplay.
 - Refactors must preserve gameplay behavior.
 - Refactor incrementally:
   1. Extract constants/config.
