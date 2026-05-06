@@ -13,6 +13,46 @@ const BEST_SCORE_KEY = "portfolioCombatBestScore";
 const PLAYER_ID_KEY = "portfolioCombatPlayerId";
 const UI_FONT = "11px";
 const TITLE_FONT = "12px";
+const INITIAL_ROUND = 1;
+const INITIAL_HEALTH = 3;
+const PLAYER_START_Y_OFFSET = 18;
+const ENEMY_SPAWN_MARGIN = 16;
+const ENEMY_SPAWN_JITTER = 6;
+const ENEMY_SPEED_PER_ROUND = 3;
+const ENEMY_HIT_TINT = 0xffb3b3;
+const ATTACK_CENTER_OFFSET = 14;
+const ATTACK_HIT_PADDING = 8;
+const SLASH_DEPTH = 5;
+const SLASH_FADE_SCALE = 1.08;
+const SLASH_FADE_DURATION = 150;
+const SLASH_OFFSET = 6;
+const SLASH_START_ANGLE = -Math.PI / 3.2;
+const SLASH_END_ANGLE = Math.PI / 3.2;
+const SLASH_RADIUS = 16;
+const SLASH_OUTER_RADIUS = 19;
+const SLASH_STEPS = 6;
+const SLASH_STEP_DELAY = 18;
+const SLASH_SHADOW_WIDTH = 4;
+const SLASH_SHADOW_COLOR = 0xffe7a2;
+const SLASH_SHADOW_ALPHA = 0.34;
+const SLASH_CORE_WIDTH = 2;
+const SLASH_CORE_COLOR = 0xffffff;
+const SLASH_CORE_ALPHA = 0.82;
+const PLAYER_HIT_SHAKE_DURATION = 90;
+const PLAYER_HIT_SHAKE_INTENSITY = 0.008;
+const PLAYER_HIT_TINT = 0xff6b6b;
+const PLAYER_HIT_BLINK_ALPHA = 0.35;
+const PLAYER_HIT_BLINK_DURATION = 80;
+const PLAYER_HIT_BLINK_REPEATS = 5;
+const ENEMY_DEFEAT_TINT = 0xffffff;
+const ENEMY_DEFEAT_DEPTH = 4;
+const ENEMY_DEFEAT_KNOCKBACK = 14;
+const ENEMY_DEFEAT_SCALE = 1.2;
+const ENEMY_DEFEAT_DURATION = 130;
+const ROUND_START_DELAY = 900;
+const KILL_SCORE = 100;
+const ROUND_SCORE = 250;
+const SECOND_SCORE = 5;
 const ARENA_BOUNDS = {
   x: 12,
   y: 24,
@@ -38,8 +78,8 @@ export default class CombatScene extends Phaser.Scene {
   private attackKey!: Phaser.Input.Keyboard.Key;
   private retryKey!: Phaser.Input.Keyboard.Key;
 
-  private round = 1;
-  private health = 3;
+  private round = INITIAL_ROUND;
+  private health = INITIAL_HEALTH;
   private lastAttackAt = 0;
   private lastDamageAt = 0;
   private isChangingRound = false;
@@ -74,8 +114,8 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   create() {
-    this.round = 1;
-    this.health = 3;
+    this.round = INITIAL_ROUND;
+    this.health = INITIAL_HEALTH;
     this.lastAttackAt = 0;
     this.lastDamageAt = 0;
     this.isChangingRound = false;
@@ -134,7 +174,11 @@ export default class CombatScene extends Phaser.Scene {
       .setScrollFactor(0);
 
     this.player = this.physics.add
-      .sprite(ARENA_WIDTH / 2, ARENA_HEIGHT / 2 + 18, "playerSprite")
+      .sprite(
+        ARENA_WIDTH / 2,
+        ARENA_HEIGHT / 2 + PLAYER_START_Y_OFFSET,
+        "playerSprite",
+      )
       .setScale(1);
     this.player.setCollideWorldBounds(true);
 
@@ -342,25 +386,38 @@ export default class CombatScene extends Phaser.Scene {
 
       enemy.setCollideWorldBounds(true);
       enemy.setScale(1);
-      enemy.setTint(0xffb3b3);
+      enemy.setTint(ENEMY_HIT_TINT);
     }
   }
 
   private getSpawnPoint(index: number) {
     const positions = [
-      { x: ARENA_BOUNDS.x + 16, y: ARENA_BOUNDS.y + 16 },
-      { x: ARENA_BOUNDS.x + ARENA_BOUNDS.width - 16, y: ARENA_BOUNDS.y + 16 },
-      { x: ARENA_BOUNDS.x + 16, y: ARENA_BOUNDS.y + ARENA_BOUNDS.height - 16 },
       {
-        x: ARENA_BOUNDS.x + ARENA_BOUNDS.width - 16,
-        y: ARENA_BOUNDS.y + ARENA_BOUNDS.height - 16,
+        x: ARENA_BOUNDS.x + ENEMY_SPAWN_MARGIN,
+        y: ARENA_BOUNDS.y + ENEMY_SPAWN_MARGIN,
+      },
+      {
+        x: ARENA_BOUNDS.x + ARENA_BOUNDS.width - ENEMY_SPAWN_MARGIN,
+        y: ARENA_BOUNDS.y + ENEMY_SPAWN_MARGIN,
+      },
+      {
+        x: ARENA_BOUNDS.x + ENEMY_SPAWN_MARGIN,
+        y: ARENA_BOUNDS.y + ARENA_BOUNDS.height - ENEMY_SPAWN_MARGIN,
+      },
+      {
+        x: ARENA_BOUNDS.x + ARENA_BOUNDS.width - ENEMY_SPAWN_MARGIN,
+        y: ARENA_BOUNDS.y + ARENA_BOUNDS.height - ENEMY_SPAWN_MARGIN,
       },
     ];
 
     const base = positions[index % positions.length];
     return {
-      x: base.x + Phaser.Math.Between(-6, 6),
-      y: base.y + Phaser.Math.Between(-6, 6),
+      x:
+        base.x +
+        Phaser.Math.Between(-ENEMY_SPAWN_JITTER, ENEMY_SPAWN_JITTER),
+      y:
+        base.y +
+        Phaser.Math.Between(-ENEMY_SPAWN_JITTER, ENEMY_SPAWN_JITTER),
     };
   }
 
@@ -369,7 +426,7 @@ export default class CombatScene extends Phaser.Scene {
       this.physics.moveToObject(
         enemy,
         this.player,
-        ENEMY_SPEED + this.round * 3,
+        ENEMY_SPEED + this.round * ENEMY_SPEED_PER_ROUND,
       );
       enemy.setFlipX(enemy.body!.velocity.x < 0);
     });
@@ -385,8 +442,8 @@ export default class CombatScene extends Phaser.Scene {
     this.tweens.add({
       targets: slash,
       alpha: 0,
-      scale: 1.08,
-      duration: 150,
+      scale: SLASH_FADE_SCALE,
+      duration: SLASH_FADE_DURATION,
       onComplete: () => slash.destroy(),
     });
 
@@ -398,7 +455,7 @@ export default class CombatScene extends Phaser.Scene {
         enemy.y,
       );
 
-      if (distance <= ATTACK_RANGE / 2 + 8) {
+      if (distance <= ATTACK_RANGE / 2 + ATTACK_HIT_PADDING) {
         this.defeatEnemy(enemy);
       }
     });
@@ -412,7 +469,10 @@ export default class CombatScene extends Phaser.Scene {
 
     this.lastDamageAt = this.time.now;
     this.health -= 1;
-    this.cameras.main.shake(90, 0.008);
+    this.cameras.main.shake(
+      PLAYER_HIT_SHAKE_DURATION,
+      PLAYER_HIT_SHAKE_INTENSITY,
+    );
     this.startPlayerInvulnerabilityFeedback();
 
     if (this.health <= 0) {
@@ -424,42 +484,45 @@ export default class CombatScene extends Phaser.Scene {
 
   private getAttackCenter() {
     return {
-      x: this.player.x + this.facing.x * 14,
-      y: this.player.y + this.facing.y * 14,
+      x: this.player.x + this.facing.x * ATTACK_CENTER_OFFSET,
+      y: this.player.y + this.facing.y * ATTACK_CENTER_OFFSET,
     };
   }
 
   private createSlashEffect(x: number, y: number) {
-    const slash = this.add.container(x, y).setDepth(5);
+    const slash = this.add.container(x, y).setDepth(SLASH_DEPTH);
     const arc = this.add.graphics();
     const angle = Math.atan2(this.facing.y, this.facing.x);
-    const startAngle = -Math.PI / 3.2;
-    const endAngle = Math.PI / 3.2;
-    const radius = 16;
-    const outerRadius = 19;
-    const steps = 6;
 
-    arc.x = this.facing.x * 6;
-    arc.y = this.facing.y * 6;
+    arc.x = this.facing.x * SLASH_OFFSET;
+    arc.y = this.facing.y * SLASH_OFFSET;
     arc.rotation = angle;
     slash.add(arc);
 
-    for (let step = 1; step <= steps; step += 1) {
-      this.time.delayedCall((step - 1) * 18, () => {
+    for (let step = 1; step <= SLASH_STEPS; step += 1) {
+      this.time.delayedCall((step - 1) * SLASH_STEP_DELAY, () => {
         if (!arc.active) return;
 
-        const progress = step / steps;
-        const currentEnd = Phaser.Math.Linear(startAngle, endAngle, progress);
+        const progress = step / SLASH_STEPS;
+        const currentEnd = Phaser.Math.Linear(
+          SLASH_START_ANGLE,
+          SLASH_END_ANGLE,
+          progress,
+        );
         arc.clear();
 
-        arc.lineStyle(4, 0xffe7a2, 0.34);
+        arc.lineStyle(
+          SLASH_SHADOW_WIDTH,
+          SLASH_SHADOW_COLOR,
+          SLASH_SHADOW_ALPHA,
+        );
         arc.beginPath();
-        arc.arc(0, 0, radius, startAngle, currentEnd);
+        arc.arc(0, 0, SLASH_RADIUS, SLASH_START_ANGLE, currentEnd);
         arc.strokePath();
 
-        arc.lineStyle(2, 0xffffff, 0.82);
+        arc.lineStyle(SLASH_CORE_WIDTH, SLASH_CORE_COLOR, SLASH_CORE_ALPHA);
         arc.beginPath();
-        arc.arc(0, 0, outerRadius, startAngle, currentEnd);
+        arc.arc(0, 0, SLASH_OUTER_RADIUS, SLASH_START_ANGLE, currentEnd);
         arc.strokePath();
       });
     }
@@ -472,8 +535,8 @@ export default class CombatScene extends Phaser.Scene {
 
     this.kills += 1;
     enemy.disableBody(false, false);
-    enemy.setTint(0xffffff);
-    enemy.setDepth(4);
+    enemy.setTint(ENEMY_DEFEAT_TINT);
+    enemy.setDepth(ENEMY_DEFEAT_DEPTH);
 
     const knockback = new Phaser.Math.Vector2(
       enemy.x - this.player.x,
@@ -481,28 +544,28 @@ export default class CombatScene extends Phaser.Scene {
     );
 
     if (knockback.lengthSq() === 0) knockback.copy(this.facing);
-    knockback.normalize().scale(14);
+    knockback.normalize().scale(ENEMY_DEFEAT_KNOCKBACK);
 
     this.tweens.add({
       targets: enemy,
       x: enemy.x + knockback.x,
       y: enemy.y + knockback.y,
       alpha: 0,
-      scale: 1.2,
-      duration: 130,
+      scale: ENEMY_DEFEAT_SCALE,
+      duration: ENEMY_DEFEAT_DURATION,
       onComplete: () => enemy.destroy(),
     });
   }
 
   private startPlayerInvulnerabilityFeedback() {
-    this.player.setTint(0xff6b6b);
+    this.player.setTint(PLAYER_HIT_TINT);
 
     this.tweens.add({
       targets: this.player,
-      alpha: 0.35,
-      duration: 80,
+      alpha: PLAYER_HIT_BLINK_ALPHA,
+      duration: PLAYER_HIT_BLINK_DURATION,
       yoyo: true,
-      repeat: 5,
+      repeat: PLAYER_HIT_BLINK_REPEATS,
       onComplete: () => {
         if (!this.player.active) return;
         this.player.setAlpha(1);
@@ -518,7 +581,7 @@ export default class CombatScene extends Phaser.Scene {
     this.round += 1;
     this.messageText.setText(`RONDA ${this.round}`).setVisible(true);
 
-    this.time.delayedCall(900, () => {
+    this.time.delayedCall(ROUND_START_DELAY, () => {
       if (!this.isGameOver) this.startRound();
     });
   }
@@ -580,7 +643,11 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private calculateScore() {
-    return this.kills * 100 + this.round * 250 + this.getSurvivedSeconds() * 5;
+    return (
+      this.kills * KILL_SCORE +
+      this.round * ROUND_SCORE +
+      this.getSurvivedSeconds() * SECOND_SCORE
+    );
   }
 
   private getSurvivedSeconds() {
