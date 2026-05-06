@@ -1,4 +1,13 @@
 import Phaser from "phaser";
+import {
+  formatRankingRows,
+  getBestScore,
+  getPlayerId,
+  hasBestScore,
+  loadRanking,
+  saveBestScore,
+  saveRankingEntry,
+} from "./combat/ranking";
 import type { RankingEntry, SpawnPoint } from "./combat/types";
 
 const ARENA_WIDTH = 320;
@@ -9,9 +18,6 @@ const ATTACK_RANGE = 34;
 const ATTACK_COOLDOWN = 320;
 const DAMAGE_COOLDOWN = 900;
 const MAX_NAME_LENGTH = 10;
-const RANKING_KEY = "portfolioCombatRanking";
-const BEST_SCORE_KEY = "portfolioCombatBestScore";
-const PLAYER_ID_KEY = "portfolioCombatPlayerId";
 const UI_FONT = "11px";
 const TITLE_FONT = "12px";
 const INITIAL_ROUND = 1;
@@ -632,10 +638,9 @@ export default class CombatScene extends Phaser.Scene {
       enemy.disableBody(true, true);
     });
 
-    const bestScore = this.getBestScore();
-    const hasBestScore = window.localStorage.getItem(BEST_SCORE_KEY) !== null;
+    const bestScore = getBestScore();
 
-    if (!hasBestScore || this.finalScore > bestScore) {
+    if (!hasBestScore() || this.finalScore > bestScore) {
       this.isEnteringName = true;
       this.messageText
         .setText(`NUEVO RECORD: ${this.finalScore}`)
@@ -755,7 +760,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private saveRecord() {
     const entry: RankingEntry = {
-      playerId: this.getPlayerId(),
+      playerId: getPlayerId(),
       name: this.nameDraft.trim() || "ANON",
       score: this.finalScore,
       round: this.round,
@@ -764,17 +769,8 @@ export default class CombatScene extends Phaser.Scene {
       date: new Date().toISOString(),
     };
 
-    const ranking = [
-      ...this.loadRanking().filter((record) => {
-        return record.playerId !== entry.playerId;
-      }),
-      entry,
-    ]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
-
-    window.localStorage.setItem(RANKING_KEY, JSON.stringify(ranking));
-    window.localStorage.setItem(BEST_SCORE_KEY, String(this.finalScore));
+    saveRankingEntry(entry);
+    saveBestScore(this.finalScore);
 
     this.isEnteringName = false;
     this.nameInputText.setVisible(false);
@@ -783,8 +779,8 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private showRanking(footer: string) {
-    const ranking = this.loadRanking();
-    const rows = this.formatRankingRows(ranking);
+    const ranking = loadRanking();
+    const rows = formatRankingRows(ranking);
 
     this.rankingText
       .setText([
@@ -797,49 +793,4 @@ export default class CombatScene extends Phaser.Scene {
     this.controlsText.setText(footer).setVisible(true);
   }
 
-  private loadRanking(): RankingEntry[] {
-    const rawRanking = window.localStorage.getItem(RANKING_KEY);
-    if (!rawRanking) return [];
-
-    try {
-      const ranking = JSON.parse(rawRanking) as RankingEntry[];
-      if (!Array.isArray(ranking)) return [];
-      return ranking.filter(this.isRankingEntry).slice(0, 10);
-    } catch {
-      return [];
-    }
-  }
-
-  private formatRankingRows(ranking: RankingEntry[]) {
-    if (ranking.length === 0) return ["SIN RECORDS TODAVIA"];
-
-    return ranking.map((entry, index) => {
-      const position = String(index + 1).padStart(2, "0");
-      return `${position} ${entry.name.padEnd(10, " ")} ${entry.score}`;
-    });
-  }
-
-  private isRankingEntry(entry: RankingEntry) {
-    return (
-      typeof entry.name === "string" &&
-      typeof entry.score === "number" &&
-      typeof entry.round === "number" &&
-      typeof entry.kills === "number" &&
-      typeof entry.seconds === "number" &&
-      typeof entry.date === "string"
-    );
-  }
-
-  private getBestScore() {
-    return Number(window.localStorage.getItem(BEST_SCORE_KEY) ?? 0);
-  }
-
-  private getPlayerId() {
-    const currentId = window.localStorage.getItem(PLAYER_ID_KEY);
-    if (currentId) return currentId;
-
-    const newId = crypto.randomUUID();
-    window.localStorage.setItem(PLAYER_ID_KEY, newId);
-    return newId;
-  }
 }
