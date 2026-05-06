@@ -145,24 +145,7 @@ export default class CombatScene extends Phaser.Scene {
 
     wallsLayer.setCollisionByProperty({ collides: true });
 
-    this.add
-      .text(4, 2, "ARENA", {
-        fontFamily: "monospace",
-        fontSize: TITLE_FONT,
-        color: "#ffe7a2",
-      })
-      .setScrollFactor(0);
-
-    this.add
-      .text(ARENA_WIDTH - 4, 2, "ESP: ATTACK | ESC: HUB", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#05F521",
-        backgroundColor: "rgba(0,0,0,0.72)",
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0);
+    this.createStaticTexts();
 
     this.player = this.physics.add
       .sprite(
@@ -195,100 +178,8 @@ export default class CombatScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.E,
     );
 
-    this.roundText = this.add
-      .text(8, ARENA_HEIGHT - 34, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.45)",
-        padding: { x: 4, y: 2 },
-      })
-      .setScrollFactor(0);
-
-    this.healthText = this.add
-      .text(8, ARENA_HEIGHT - 18, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffe7a2",
-        backgroundColor: "rgba(0,0,0,0.45)",
-        padding: { x: 4, y: 2 },
-      })
-      .setScrollFactor(0);
-
-    this.enemiesText = this.add
-      .text(ARENA_WIDTH - 8, ARENA_HEIGHT - 18, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.45)",
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0);
-
-    this.scoreText = this.add
-      .text(ARENA_WIDTH - 8, ARENA_HEIGHT - 34, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffe7a2",
-        backgroundColor: "rgba(0,0,0,0.45)",
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0);
-
-    this.messageText = this.add
-      .text(ARENA_WIDTH / 2, ARENA_HEIGHT / 2 - 42, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.6)",
-        padding: { x: 5, y: 3 },
-      })
-      .setOrigin(0.5)
-      .setVisible(false)
-      .setScrollFactor(0)
-      .setDepth(20);
-
-    this.rankingText = this.add
-      .text(ARENA_WIDTH / 2, ARENA_HEIGHT / 2 - 18, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#fff4bf",
-        backgroundColor: "rgba(0,0,0,0.82)",
-        padding: { x: 7, y: 5 },
-        align: "left",
-      })
-      .setOrigin(0.5, 0)
-      .setVisible(false)
-      .setScrollFactor(0)
-      .setDepth(20);
-
-    this.nameInputText = this.add
-      .text(ARENA_WIDTH / 2, ARENA_HEIGHT / 2 + 45, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffffff",
-        backgroundColor: "rgba(79,45,22,0.85)",
-        padding: { x: 5, y: 3 },
-      })
-      .setOrigin(0.5)
-      .setVisible(false)
-      .setScrollFactor(0)
-      .setDepth(20);
-
-    this.controlsText = this.add
-      .text(ARENA_WIDTH / 2, ARENA_HEIGHT - 8, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#05F521",
-        backgroundColor: "rgba(0,0,0,0.72)",
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(0.5, 1)
-      .setVisible(false)
-      .setScrollFactor(0)
-      .setDepth(20);
+    this.createHudTexts();
+    this.createOverlayTexts();
 
     this.input.keyboard?.on("keydown", this.handleNameInput, this);
     window.addEventListener("blur", this.handleWindowBlur);
@@ -357,6 +248,126 @@ export default class CombatScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
       this.returnToHub();
     }
+  }
+
+  private createStaticTexts() {
+    this.add
+      .text(4, 2, "ARENA", {
+        fontFamily: "monospace",
+        fontSize: TITLE_FONT,
+        color: "#ffe7a2",
+      })
+      .setScrollFactor(0);
+
+    this.add
+      .text(ARENA_WIDTH - 4, 2, "ESP: ATTACK | ESC: HUB", {
+        fontFamily: "monospace",
+        fontSize: UI_FONT,
+        color: "#05F521",
+        backgroundColor: "rgba(0,0,0,0.72)",
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(1, 0)
+      .setScrollFactor(0);
+  }
+
+  private createHudTexts() {
+    this.roundText = this.add
+      .text(8, ARENA_HEIGHT - 34, "", {
+        fontFamily: "monospace",
+        fontSize: UI_FONT,
+        color: "#ffffff",
+        backgroundColor: "rgba(0,0,0,0.45)",
+        padding: { x: 4, y: 2 },
+      })
+      .setScrollFactor(0);
+
+    this.healthText = this.add
+      .text(8, ARENA_HEIGHT - 18, "", {
+        fontFamily: "monospace",
+        fontSize: UI_FONT,
+        color: "#ffe7a2",
+        backgroundColor: "rgba(0,0,0,0.45)",
+        padding: { x: 4, y: 2 },
+      })
+      .setScrollFactor(0);
+
+    this.enemiesText = this.add
+      .text(ARENA_WIDTH - 8, ARENA_HEIGHT - 18, "", {
+        fontFamily: "monospace",
+        fontSize: UI_FONT,
+        color: "#ffffff",
+        backgroundColor: "rgba(0,0,0,0.45)",
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(1, 0)
+      .setScrollFactor(0);
+
+    this.scoreText = this.add
+      .text(ARENA_WIDTH - 8, ARENA_HEIGHT - 34, "", {
+        fontFamily: "monospace",
+        fontSize: UI_FONT,
+        color: "#ffe7a2",
+        backgroundColor: "rgba(0,0,0,0.45)",
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(1, 0)
+      .setScrollFactor(0);
+  }
+
+  private createOverlayTexts() {
+    this.messageText = this.add
+      .text(ARENA_WIDTH / 2, ARENA_HEIGHT / 2 - 42, "", {
+        fontFamily: "monospace",
+        fontSize: UI_FONT,
+        color: "#ffffff",
+        backgroundColor: "rgba(0,0,0,0.6)",
+        padding: { x: 5, y: 3 },
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setScrollFactor(0)
+      .setDepth(20);
+
+    this.rankingText = this.add
+      .text(ARENA_WIDTH / 2, ARENA_HEIGHT / 2 - 18, "", {
+        fontFamily: "monospace",
+        fontSize: UI_FONT,
+        color: "#fff4bf",
+        backgroundColor: "rgba(0,0,0,0.82)",
+        padding: { x: 7, y: 5 },
+        align: "left",
+      })
+      .setOrigin(0.5, 0)
+      .setVisible(false)
+      .setScrollFactor(0)
+      .setDepth(20);
+
+    this.nameInputText = this.add
+      .text(ARENA_WIDTH / 2, ARENA_HEIGHT / 2 + 45, "", {
+        fontFamily: "monospace",
+        fontSize: UI_FONT,
+        color: "#ffffff",
+        backgroundColor: "rgba(79,45,22,0.85)",
+        padding: { x: 5, y: 3 },
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setScrollFactor(0)
+      .setDepth(20);
+
+    this.controlsText = this.add
+      .text(ARENA_WIDTH / 2, ARENA_HEIGHT - 8, "", {
+        fontFamily: "monospace",
+        fontSize: UI_FONT,
+        color: "#05F521",
+        backgroundColor: "rgba(0,0,0,0.72)",
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(0.5, 1)
+      .setVisible(false)
+      .setScrollFactor(0)
+      .setDepth(20);
   }
 
   private startRound() {
