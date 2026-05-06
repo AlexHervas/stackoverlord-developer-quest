@@ -32,6 +32,7 @@ const ENEMY_SPAWN_MARGIN = 16;
 const ENEMY_SPAWN_JITTER = 6;
 const ENEMY_SPEED_PER_ROUND = 3;
 const ENEMY_HIT_TINT = 0xffb3b3;
+const ENEMY_TEXTURE_KEYS = ["phantom", "spyder"] as const;
 const ATTACK_CENTER_OFFSET = 14;
 const ATTACK_HIT_PADDING = 8;
 const SLASH_DEPTH = 5;
@@ -118,7 +119,8 @@ export default class CombatScene extends Phaser.Scene {
     this.load.image("combatTiles", "assets/tilemap.png");
     this.load.tilemapTiledJSON("combatArena", "assets/combatArena.json");
     this.load.image("playerSprite", "assets/player.png");
-    this.load.image("wizard", "assets/wizard.png");
+    this.load.image("phantom", "assets/phantom.png");
+    this.load.image("spyder", "assets/spyder.png");
   }
 
   create() {
@@ -328,7 +330,7 @@ export default class CombatScene extends Phaser.Scene {
       const enemy = this.enemies.create(
         point.x,
         point.y,
-        "wizard",
+        this.getEnemyTextureKey(i),
       ) as Phaser.Physics.Arcade.Sprite;
 
       enemy.setCollideWorldBounds(true);
@@ -366,6 +368,10 @@ export default class CombatScene extends Phaser.Scene {
         base.y +
         Phaser.Math.Between(-ENEMY_SPAWN_JITTER, ENEMY_SPAWN_JITTER),
     };
+  }
+
+  private getEnemyTextureKey(index: number) {
+    return ENEMY_TEXTURE_KEYS[index % ENEMY_TEXTURE_KEYS.length];
   }
 
   private updateEnemies() {
