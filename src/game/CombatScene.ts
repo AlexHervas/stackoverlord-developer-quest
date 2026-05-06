@@ -1,5 +1,10 @@
 import Phaser from "phaser";
 import {
+  createHudTexts,
+  createOverlayTexts,
+  createStaticTexts,
+} from "./combat/hud";
+import {
   formatRankingRows,
   getBestScore,
   getPlayerId,
@@ -66,6 +71,12 @@ const ARENA_BOUNDS = {
   width: ARENA_WIDTH - 24,
   height: ARENA_HEIGHT - 36,
 };
+const HUD_CONFIG = {
+  arenaWidth: ARENA_WIDTH,
+  arenaHeight: ARENA_HEIGHT,
+  titleFont: TITLE_FONT,
+  uiFont: UI_FONT,
+};
 
 export default class CombatScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -116,11 +127,11 @@ export default class CombatScene extends Phaser.Scene {
     this.setupCamera();
     const wallsLayer = this.createArenaMap();
 
-    this.createStaticTexts();
+    createStaticTexts(this, HUD_CONFIG);
     this.createPlayerAndEnemies(wallsLayer);
     this.setupInput();
-    this.createHudTexts();
-    this.createOverlayTexts();
+    this.setupHudTexts();
+    this.setupOverlayTexts();
     this.setupLifecycleListeners();
 
     this.startRound();
@@ -288,124 +299,20 @@ export default class CombatScene extends Phaser.Scene {
     });
   }
 
-  private createStaticTexts() {
-    this.add
-      .text(4, 2, "ARENA", {
-        fontFamily: "monospace",
-        fontSize: TITLE_FONT,
-        color: "#ffe7a2",
-      })
-      .setScrollFactor(0);
-
-    this.add
-      .text(ARENA_WIDTH - 4, 2, "ESP: ATTACK | ESC: HUB", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#05F521",
-        backgroundColor: "rgba(0,0,0,0.72)",
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0);
+  private setupHudTexts() {
+    const hudTexts = createHudTexts(this, HUD_CONFIG);
+    this.roundText = hudTexts.roundText;
+    this.healthText = hudTexts.healthText;
+    this.enemiesText = hudTexts.enemiesText;
+    this.scoreText = hudTexts.scoreText;
   }
 
-  private createHudTexts() {
-    this.roundText = this.add
-      .text(8, ARENA_HEIGHT - 34, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.45)",
-        padding: { x: 4, y: 2 },
-      })
-      .setScrollFactor(0);
-
-    this.healthText = this.add
-      .text(8, ARENA_HEIGHT - 18, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffe7a2",
-        backgroundColor: "rgba(0,0,0,0.45)",
-        padding: { x: 4, y: 2 },
-      })
-      .setScrollFactor(0);
-
-    this.enemiesText = this.add
-      .text(ARENA_WIDTH - 8, ARENA_HEIGHT - 18, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.45)",
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0);
-
-    this.scoreText = this.add
-      .text(ARENA_WIDTH - 8, ARENA_HEIGHT - 34, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffe7a2",
-        backgroundColor: "rgba(0,0,0,0.45)",
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0);
-  }
-
-  private createOverlayTexts() {
-    this.messageText = this.add
-      .text(ARENA_WIDTH / 2, ARENA_HEIGHT / 2 - 42, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.6)",
-        padding: { x: 5, y: 3 },
-      })
-      .setOrigin(0.5)
-      .setVisible(false)
-      .setScrollFactor(0)
-      .setDepth(20);
-
-    this.rankingText = this.add
-      .text(ARENA_WIDTH / 2, ARENA_HEIGHT / 2 - 18, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#fff4bf",
-        backgroundColor: "rgba(0,0,0,0.82)",
-        padding: { x: 7, y: 5 },
-        align: "left",
-      })
-      .setOrigin(0.5, 0)
-      .setVisible(false)
-      .setScrollFactor(0)
-      .setDepth(20);
-
-    this.nameInputText = this.add
-      .text(ARENA_WIDTH / 2, ARENA_HEIGHT / 2 + 45, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#ffffff",
-        backgroundColor: "rgba(79,45,22,0.85)",
-        padding: { x: 5, y: 3 },
-      })
-      .setOrigin(0.5)
-      .setVisible(false)
-      .setScrollFactor(0)
-      .setDepth(20);
-
-    this.controlsText = this.add
-      .text(ARENA_WIDTH / 2, ARENA_HEIGHT - 8, "", {
-        fontFamily: "monospace",
-        fontSize: UI_FONT,
-        color: "#05F521",
-        backgroundColor: "rgba(0,0,0,0.72)",
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(0.5, 1)
-      .setVisible(false)
-      .setScrollFactor(0)
-      .setDepth(20);
+  private setupOverlayTexts() {
+    const overlayTexts = createOverlayTexts(this, HUD_CONFIG);
+    this.messageText = overlayTexts.messageText;
+    this.rankingText = overlayTexts.rankingText;
+    this.nameInputText = overlayTexts.nameInputText;
+    this.controlsText = overlayTexts.controlsText;
   }
 
   private startRound() {
