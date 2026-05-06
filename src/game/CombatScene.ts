@@ -105,93 +105,17 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   create() {
-    this.round = INITIAL_ROUND;
-    this.health = INITIAL_HEALTH;
-    this.lastAttackAt = 0;
-    this.lastDamageAt = 0;
-    this.isChangingRound = false;
-    this.isGameOver = false;
-    this.isEnteringName = false;
-    this.kills = 0;
-    this.activeStartedAt = Date.now();
-    this.activeElapsedMs = 0;
-    this.finalScore = 0;
-    this.finalSeconds = 0;
-    this.nameDraft = "";
-    this.facing.set(1, 0);
-
-    this.physics.world.setBounds(
-      ARENA_BOUNDS.x,
-      ARENA_BOUNDS.y,
-      ARENA_BOUNDS.width,
-      ARENA_BOUNDS.height,
-    );
-
-    const cam = this.cameras.main;
-    cam.setBounds(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
-    cam.roundPixels = true;
-    cam.centerOn(ARENA_WIDTH / 2, ARENA_HEIGHT / 2);
-
-    const map = this.make.tilemap({ key: "combatArena" });
-    const tileset = map.addTilesetImage("combat_tiles", "combatTiles");
-    if (!tileset) throw new Error("Tileset de arena no encontrado");
-
-    const groundLayer = map.createLayer("Ground", tileset);
-    const wallsLayer = map.createLayer("Walls", tileset);
-    const decorationLayer = map.createLayer("Decoration", tileset);
-    if (!groundLayer || !wallsLayer || !decorationLayer) {
-      throw new Error("Faltan capas en combatArena.json");
-    }
-
-    wallsLayer.setCollisionByProperty({ collides: true });
+    this.resetCombatState();
+    this.setupWorldBounds();
+    this.setupCamera();
+    const wallsLayer = this.createArenaMap();
 
     this.createStaticTexts();
-
-    this.player = this.physics.add
-      .sprite(
-        ARENA_WIDTH / 2,
-        ARENA_HEIGHT / 2 + PLAYER_START_Y_OFFSET,
-        "playerSprite",
-      )
-      .setScale(1);
-    this.player.setCollideWorldBounds(true);
-
-    this.enemies = this.physics.add.group();
-    this.physics.add.collider(this.player, wallsLayer);
-    this.physics.add.collider(this.enemies, wallsLayer);
-    this.physics.add.overlap(
-      this.player,
-      this.enemies,
-      this.handlePlayerHit,
-      undefined,
-      this,
-    );
-
-    this.cursors = this.input.keyboard?.createCursorKeys();
-    this.escKey = this.input.keyboard!.addKey(
-      Phaser.Input.Keyboard.KeyCodes.ESC,
-    );
-    this.attackKey = this.input.keyboard!.addKey(
-      Phaser.Input.Keyboard.KeyCodes.SPACE,
-    );
-    this.retryKey = this.input.keyboard!.addKey(
-      Phaser.Input.Keyboard.KeyCodes.E,
-    );
-
+    this.createPlayerAndEnemies(wallsLayer);
+    this.setupInput();
     this.createHudTexts();
     this.createOverlayTexts();
-
-    this.input.keyboard?.on("keydown", this.handleNameInput, this);
-    window.addEventListener("blur", this.handleWindowBlur);
-    document.addEventListener("visibilitychange", this.handleVisibilityChange);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.input.keyboard?.off("keydown", this.handleNameInput, this);
-      window.removeEventListener("blur", this.handleWindowBlur);
-      document.removeEventListener(
-        "visibilitychange",
-        this.handleVisibilityChange,
-      );
-    });
+    this.setupLifecycleListeners();
 
     this.startRound();
     this.cameras.main.fadeIn(250, 0, 0, 0);
@@ -248,6 +172,105 @@ export default class CombatScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
       this.returnToHub();
     }
+  }
+
+  private resetCombatState() {
+    this.round = INITIAL_ROUND;
+    this.health = INITIAL_HEALTH;
+    this.lastAttackAt = 0;
+    this.lastDamageAt = 0;
+    this.isChangingRound = false;
+    this.isGameOver = false;
+    this.isEnteringName = false;
+    this.kills = 0;
+    this.activeStartedAt = Date.now();
+    this.activeElapsedMs = 0;
+    this.finalScore = 0;
+    this.finalSeconds = 0;
+    this.nameDraft = "";
+    this.facing.set(1, 0);
+  }
+
+  private setupWorldBounds() {
+    this.physics.world.setBounds(
+      ARENA_BOUNDS.x,
+      ARENA_BOUNDS.y,
+      ARENA_BOUNDS.width,
+      ARENA_BOUNDS.height,
+    );
+  }
+
+  private setupCamera() {
+    const cam = this.cameras.main;
+    cam.setBounds(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
+    cam.roundPixels = true;
+    cam.centerOn(ARENA_WIDTH / 2, ARENA_HEIGHT / 2);
+  }
+
+  private createArenaMap() {
+    const map = this.make.tilemap({ key: "combatArena" });
+    const tileset = map.addTilesetImage("combat_tiles", "combatTiles");
+    if (!tileset) throw new Error("Tileset de arena no encontrado");
+
+    const groundLayer = map.createLayer("Ground", tileset);
+    const wallsLayer = map.createLayer("Walls", tileset);
+    const decorationLayer = map.createLayer("Decoration", tileset);
+    if (!groundLayer || !wallsLayer || !decorationLayer) {
+      throw new Error("Faltan capas en combatArena.json");
+    }
+
+    wallsLayer.setCollisionByProperty({ collides: true });
+
+    return wallsLayer;
+  }
+
+  private createPlayerAndEnemies(wallsLayer: Phaser.Tilemaps.TilemapLayer) {
+    this.player = this.physics.add
+      .sprite(
+        ARENA_WIDTH / 2,
+        ARENA_HEIGHT / 2 + PLAYER_START_Y_OFFSET,
+        "playerSprite",
+      )
+      .setScale(1);
+    this.player.setCollideWorldBounds(true);
+
+    this.enemies = this.physics.add.group();
+    this.physics.add.collider(this.player, wallsLayer);
+    this.physics.add.collider(this.enemies, wallsLayer);
+    this.physics.add.overlap(
+      this.player,
+      this.enemies,
+      this.handlePlayerHit,
+      undefined,
+      this,
+    );
+  }
+
+  private setupInput() {
+    this.cursors = this.input.keyboard?.createCursorKeys();
+    this.escKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ESC,
+    );
+    this.attackKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SPACE,
+    );
+    this.retryKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.E,
+    );
+  }
+
+  private setupLifecycleListeners() {
+    this.input.keyboard?.on("keydown", this.handleNameInput, this);
+    window.addEventListener("blur", this.handleWindowBlur);
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.off("keydown", this.handleNameInput, this);
+      window.removeEventListener("blur", this.handleWindowBlur);
+      document.removeEventListener(
+        "visibilitychange",
+        this.handleVisibilityChange,
+      );
+    });
   }
 
   private createStaticTexts() {
