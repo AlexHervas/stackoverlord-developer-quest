@@ -124,17 +124,7 @@ export default class CombatScene extends Phaser.Scene {
   update() {
     if (!this.player || !this.cursors) return;
 
-    if (this.isGameOver) {
-      this.player.setVelocity(0, 0);
-      if (
-        !this.isEnteringName &&
-        Phaser.Input.Keyboard.JustDown(this.retryKey)
-      ) {
-        this.scene.restart();
-      }
-      if (Phaser.Input.Keyboard.JustDown(this.escKey)) this.returnToHub();
-      return;
-    }
+    if (this.handleGameOverInput()) return;
 
     let vx = 0;
     let vy = 0;
@@ -172,6 +162,20 @@ export default class CombatScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
       this.returnToHub();
     }
+  }
+
+  private handleGameOverInput() {
+    if (!this.isGameOver) return false;
+
+    this.player.setVelocity(0, 0);
+    if (
+      !this.isEnteringName &&
+      Phaser.Input.Keyboard.JustDown(this.retryKey)
+    ) {
+      this.scene.restart();
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.escKey)) this.returnToHub();
+    return true;
   }
 
   private resetCombatState() {
