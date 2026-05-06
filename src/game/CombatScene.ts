@@ -126,30 +126,7 @@ export default class CombatScene extends Phaser.Scene {
 
     if (this.handleGameOverInput()) return;
 
-    let vx = 0;
-    let vy = 0;
-
-    if (this.cursors.left?.isDown) {
-      vx = -1;
-      this.player.setFlipX(true);
-    } else if (this.cursors.right?.isDown) {
-      vx = 1;
-      this.player.setFlipX(false);
-    }
-
-    if (this.cursors.up?.isDown) vy = -1;
-    else if (this.cursors.down?.isDown) vy = 1;
-
-    if (vx !== 0 || vy !== 0) {
-      this.facing.set(vx, vy).normalize();
-    }
-
-    this.player.setAngle(vx === 0 ? 0 : vx < 0 ? -3 : 3);
-
-    const velocity = new Phaser.Math.Vector2(vx, vy);
-    if (velocity.lengthSq() > 0) velocity.normalize().scale(SPEED);
-    this.player.setVelocity(velocity.x, velocity.y);
-
+    this.updatePlayerMovement(this.cursors);
     this.updateEnemies();
 
     if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
@@ -162,6 +139,34 @@ export default class CombatScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
       this.returnToHub();
     }
+  }
+
+  private updatePlayerMovement(
+    cursors: Phaser.Types.Input.Keyboard.CursorKeys,
+  ) {
+    let vx = 0;
+    let vy = 0;
+
+    if (cursors.left?.isDown) {
+      vx = -1;
+      this.player.setFlipX(true);
+    } else if (cursors.right?.isDown) {
+      vx = 1;
+      this.player.setFlipX(false);
+    }
+
+    if (cursors.up?.isDown) vy = -1;
+    else if (cursors.down?.isDown) vy = 1;
+
+    if (vx !== 0 || vy !== 0) {
+      this.facing.set(vx, vy).normalize();
+    }
+
+    this.player.setAngle(vx === 0 ? 0 : vx < 0 ? -3 : 3);
+
+    const velocity = new Phaser.Math.Vector2(vx, vy);
+    if (velocity.lengthSq() > 0) velocity.normalize().scale(SPEED);
+    this.player.setVelocity(velocity.x, velocity.y);
   }
 
   private handleGameOverInput() {
