@@ -57,7 +57,6 @@ const PLAYER_HIT_TINT = 0xff6b6b;
 const PLAYER_HIT_BLINK_ALPHA = 0.35;
 const PLAYER_HIT_BLINK_DURATION = 80;
 const PLAYER_HIT_BLINK_REPEATS = 5;
-const ENEMY_DEFEAT_TINT = 0xffffff;
 const ENEMY_DEFEAT_DEPTH = 4;
 const ENEMY_DEFEAT_KNOCKBACK = 14;
 const ENEMY_DEFEAT_SCALE = 1.2;
@@ -335,7 +334,6 @@ export default class CombatScene extends Phaser.Scene {
 
       enemy.setCollideWorldBounds(true);
       enemy.setScale(1);
-      enemy.setTint(ENEMY_HIT_TINT);
     }
   }
 
@@ -488,7 +486,7 @@ export default class CombatScene extends Phaser.Scene {
 
     this.kills += 1;
     enemy.disableBody(false, false);
-    enemy.setTint(ENEMY_DEFEAT_TINT);
+    enemy.setTint(ENEMY_HIT_TINT);
     enemy.setDepth(ENEMY_DEFEAT_DEPTH);
 
     const knockback = new Phaser.Math.Vector2(
