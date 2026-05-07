@@ -34,82 +34,74 @@ type ModalContent = {
 
 const modalContent: Record<UiModal, ModalContent> = {
   cv: {
-    eyebrow: "Pergamino de oficio",
+    eyebrow: "Career scroll",
     title: "Alejandro Hervas Gonzalez",
     intro:
-      "Desarrollador Web Full Stack. Puedes descargar el curriculum completo en PDF desde este pergamino.",
+      "Full Stack Web Developer. You can download the full CV as a PDF from this scroll.",
     actions: [
       {
-        label: "Descargar CV",
+        label: "Download CV",
         href: "/assets/cv/CV_Alejandro_Hervas_2025.pdf",
         download: true,
-      },
-      {
-        label: "GitHub",
-        href: "https://github.com/AlexHervas",
-      },
-      {
-        label: "Email",
-        href: "mailto:stackoverlord.dev@gmail.com",
       },
     ],
     sections: [
       {
-        title: "Perfil",
+        title: "Profile",
         items: [
-          "Full stack formado en mayo de 2025 tras un bootcamp intensivo.",
-          "Experiencia practica en proyectos reales desde frontend hasta backend.",
-          "Perfil proactivo, resolutivo y acostumbrado a trabajar con atencion al detalle.",
+          "Full stack developer trained in May 2025 after an intensive bootcamp.",
+          "Hands-on experience building real projects from frontend to backend.",
+          "Proactive, problem-solving profile with strong attention to detail.",
         ],
       },
       {
-        title: "Stack principal",
+        title: "Main stack",
         items: [
-          "Frontend: HTML, CSS, JavaScript, React, Redux y Tailwind.",
-          "Backend: Node.js, Express, MongoDB, Mongoose, JWT y REST APIs.",
-          "Herramientas: Git, GitHub, Postman, Vite, Bun, Redis, WebSockets y OpenAI API.",
+          "Frontend: HTML, CSS, JavaScript, React, Redux and Tailwind.",
+          "Backend: Node.js, Express, MongoDB, Mongoose, JWT and REST APIs.",
+          "Tools: Git, GitHub, Postman, Vite, Bun, Redis, WebSockets and OpenAI API.",
         ],
       },
       {
-        title: "Formacion",
+        title: "Education",
         items: [
-          "Bootcamp Desarrollo Web Full Stack en KeepCoding.",
-          "Mas de 600 horas: arquitectura backend, despliegue, testing y metodologias agiles.",
-          "Ingles nivel B1.",
+          "Full Stack Web Development Bootcamp at KeepCoding.",
+          "Over 600 hours covering backend architecture, deployment, testing and agile methods.",
+          "English level B1.",
         ],
       },
     ],
   },
   about: {
-    eyebrow: "Bitacora personal",
-    title: "Sobre mi",
+    eyebrow: "Personal log",
+    title: "About me",
     intro:
-      "En 2023 reoriente mi carrera hacia el desarrollo web. Empece con formacion autodidacta y despues di el salto a un bootcamp full stack para construir aplicaciones completas con una base solida.",
+      "In 2023 I redirected my career toward web development. I started with self-guided learning and then joined a full stack bootcamp to build complete applications with solid foundations.",
     actions: [
       {
-        label: "Perfil GitHub",
+        label: "GitHub profile",
         href: "https://github.com/AlexHervas",
       },
       {
-        label: "Contactar",
+        label: "Contact",
         href: "mailto:stackoverlord.dev@gmail.com",
       },
     ],
     sections: [
       {
-        title: "Quien soy",
+        title: "Who I am",
         items: [
-          "Desarrollador full stack junior con interes en producto, UI y experiencias interactivas.",
-          "Vengo de una etapa profesional donde desarrolle constancia, responsabilidad y trabajo bajo presion.",
-          "Me motiva construir proyectos completos y entender como encajan frontend, backend y despliegue.",
+          "Junior full stack developer interested in product, UI and interactive experiences.",
+          "I come from a previous professional stage where I built consistency, responsibility and calm under pressure.",
+          "I enjoy building complete projects and understanding how frontend, backend and deployment fit together.",
         ],
       },
       {
-        title: "Lo que estoy construyendo",
+        title: "What I build",
         items: [
-          "Aplicaciones con React y TypeScript.",
-          "Backends con Node.js, Express y MongoDB.",
-          "Herramientas con IA, tiempo real y una capa visual cuidada.",
+          "Applications with React and TypeScript.",
+          "Backends with Node.js, Express and MongoDB.",
+          "Tools with AI, real-time features and a polished visual layer.",
         ],
       },
     ],
@@ -117,14 +109,14 @@ const modalContent: Record<UiModal, ModalContent> = {
       {
         name: "NoPiques",
         description:
-          "Aplicacion para deteccion de phishing con IA, frontend en React y backend con Express.",
+          "AI-powered phishing detection app with a React frontend and Express backend.",
         href: "https://github.com/AlexHervas/NoPiques",
         stack: "TypeScript, React, Express, OpenAI API, Redis",
       },
       {
         name: "Wallaclone",
         description:
-          "Proyecto final conjunto de bootcamp: clon de Wallapop (funcionalidades) con anuncios, autenticacion y chat en tiempo real.",
+          "Collaborative final bootcamp project: a Wallapop-style app with listings, authentication and real-time chat.",
         href: "https://github.com/KeepcodersWeb17/wallaclone",
         stack: "React, Redux, Node.js, Express, MongoDB, WebSockets",
       },
@@ -178,10 +170,10 @@ export default function PortfolioModal({
             <button
               type="button"
               className="grid h-9 w-9 shrink-0 place-items-center border-2 border-[#4f2d16] bg-[#8f4e22] font-mono text-lg font-black leading-none text-[#ffe7a2] shadow-[inset_0_2px_0_rgba(255,255,255,0.25),0_3px_0_#2f1d12] transition hover:bg-[#a85e2c] focus:outline-none focus:ring-2 focus:ring-[#2f1d12]"
-              aria-label="Cerrar modal"
+              aria-label="Close modal"
               onClick={onClose}
             >
-              x
+              X
             </button>
           </header>
 
@@ -234,7 +226,7 @@ export default function PortfolioModal({
           {content.projects && (
             <div className="mt-4 border-2 border-[#7a431f] bg-[#f7e3a6]/55 p-4">
               <h3 className="mb-3 font-mono text-sm font-black uppercase text-[#5e3218]">
-                Proyectos enlazados
+                Linked projects
               </h3>
               <div className="grid gap-3">
                 {content.projects.map((project) => (
