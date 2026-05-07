@@ -1,12 +1,12 @@
 import Phaser from "phaser";
-import { eventBus } from "./events/events";
+import { eventBus, type UiModal } from "./events/events";
+import { createMusicControl } from "./ui/musicControl";
 
 const ROOM_WIDTH = 320;
 const ROOM_HEIGHT = 160;
 const SPEED = 90;
 const TALK_RANGE = 18;
 const UI_FONT = "10px";
-const TITLE_FONT = "12px";
 const UI_STYLE = {
   fontFamily: "monospace",
   fontSize: UI_FONT,
@@ -14,12 +14,12 @@ const UI_STYLE = {
   backgroundColor: "rgba(0,0,0,0.72)",
   padding: { x: 4, y: 2 },
 };
-const TITLE_STYLE = {
-  fontFamily: "monospace",
-  fontSize: TITLE_FONT,
-  color: "#ffe7a2",
-  backgroundColor: "rgba(0,0,0,0.72)",
-  padding: { x: 4, y: 2 },
+const HUB_AUDIO = {
+  music: {
+    key: "hubSceneMusic",
+    path: "assets/audio/hubScene_theme.ogg",
+    volume: 0.22,
+  },
 };
 
 type HubAction = "cv" | "about" | "combat";
@@ -37,6 +37,10 @@ export default class HubScene extends Phaser.Scene {
   private npcCv!: Phaser.Physics.Arcade.Sprite;
   private npcAbout!: Phaser.Physics.Arcade.Sprite;
   private npcCombat!: Phaser.Physics.Arcade.Sprite;
+  private musicControl?: ReturnType<typeof createMusicControl>;
+  private removeUiCloseListener?: () => void;
+  private isNpcModalOpen = false;
+  private shouldIgnoreNextEsc = false;
   private spawn: HubSpawn = "default";
 
   constructor() {
@@ -48,7 +52,7 @@ export default class HubScene extends Phaser.Scene {
   }
 
   preload() {
-    // Si ya cacheas esto en otra escena no pasa nada.
+    // Re-loading cached assets is safe when returning to this scene.
     this.load.image("tiles_image", "assets/tilemap.png");
     this.load.tilemapTiledJSON("lvl2", "assets/lvl2.json");
     this.load.image("playerSprite", "assets/player.png");
@@ -58,18 +62,19 @@ export default class HubScene extends Phaser.Scene {
     this.load.image("arenaNpc", "assets/arena_npc.png");
 
     this.load.audio("interactSound", "assets/audio/select_001.ogg");
+    this.load.audio(HUB_AUDIO.music.key, HUB_AUDIO.music.path);
   }
 
   create() {
     const map = this.make.tilemap({ key: "lvl2" });
     const tileset = map.addTilesetImage("tiles_level2", "tiles_image");
-    if (!tileset) throw new Error("Tileset no encontrado");
+    if (!tileset) throw new Error("Tileset not found");
 
     const groundLayer = map.createLayer("Ground", tileset);
     const wallsLayer = map.createLayer("Walls", tileset);
     const decorationLayer = map.createLayer("Decoration", tileset);
     if (!groundLayer || !wallsLayer || !decorationLayer) {
-      throw new Error("Faltan layers en hub.json");
+      throw new Error("Missing layers in lvl2.json");
     }
 
     wallsLayer.setCollisionByProperty({ collides: true });
@@ -82,17 +87,6 @@ export default class HubScene extends Phaser.Scene {
     cam.roundPixels = true;
     cam.stopFollow();
     cam.centerOn(ROOM_WIDTH / 2, ROOM_HEIGHT / 2);
-
-    this.add.text(4, 2, "HUB", TITLE_STYLE).setScrollFactor(0).setDepth(20);
-
-    this.add
-      .text(ROOM_WIDTH - 4, 2, "ESC: VOLVER", {
-        ...UI_STYLE,
-        color: "#05F521",
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0)
-      .setDepth(20);
 
     const spawnPoint = this.getPlayerSpawn();
     this.spawn = "default";
@@ -114,7 +108,7 @@ export default class HubScene extends Phaser.Scene {
     );
 
     this.promptText = this.add
-      .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, "Pulsa E", {
+      .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, "E to interact", {
         ...UI_STYLE,
       })
       .setOrigin(0.5)
@@ -133,12 +127,21 @@ export default class HubScene extends Phaser.Scene {
     this.addNpcLabel(this.npcCv, "CV");
     this.addNpcLabel(this.npcAbout, "ABOUT");
     this.addNpcLabel(this.npcCombat, "ARENA");
+    this.createMusicControl();
 
     this.cameras.main.fadeIn(250, 0, 0, 0);
+    this.setupUiModalEvents();
+    this.setupShutdownCleanup();
   }
 
   update() {
     if (!this.player || !this.cursors) return;
+
+    if (this.isNpcModalOpen) {
+      this.pausePlayerMovement();
+      this.promptText?.setVisible(false);
+      return;
+    }
 
     let vx = 0;
     let vy = 0;
@@ -161,6 +164,12 @@ export default class HubScene extends Phaser.Scene {
     this.player.setVelocity(velocity.x, velocity.y);
 
     if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+      if (this.shouldIgnoreNextEsc) {
+        this.shouldIgnoreNextEsc = false;
+        return;
+      }
+
+      this.musicControl?.stop();
       this.cameras.main.fadeOut(250, 0, 0, 0);
 
       this.cameras.main.once(
@@ -182,13 +191,62 @@ export default class HubScene extends Phaser.Scene {
       }
 
       if (action === "cv") {
-        eventBus.emit("ui:open", { modal: "cv" });
+        this.openNpcModal("cv");
       } else if (action === "about") {
-        eventBus.emit("ui:open", { modal: "about" });
+        this.openNpcModal("about");
       } else if (action === "combat") {
+        this.musicControl?.stop();
         this.scene.start("CombatScene");
       }
     }
+  }
+
+  private createMusicControl() {
+    this.musicControl = createMusicControl(this, HUB_AUDIO.music, {
+      x: ROOM_WIDTH - 4,
+      y: 2,
+      origin: [1, 0],
+      scrollFactor: 0,
+      depth: 20,
+      style: {
+        fontFamily: "monospace",
+        fontSize: "7px",
+        color: "#ffe7a2",
+        backgroundColor: "rgba(0,0,0,0.72)",
+        padding: { x: 4, y: 2 },
+      },
+    });
+  }
+
+  private setupUiModalEvents() {
+    this.removeUiCloseListener = eventBus.on("ui:close", () => {
+      if (this.isNpcModalOpen) {
+        this.shouldIgnoreNextEsc = true;
+      }
+
+      this.isNpcModalOpen = false;
+    });
+  }
+
+  private setupShutdownCleanup() {
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.removeUiCloseListener?.();
+      this.removeUiCloseListener = undefined;
+      this.musicControl?.destroy();
+      this.musicControl = undefined;
+    });
+  }
+
+  private openNpcModal(modal: UiModal) {
+    this.isNpcModalOpen = true;
+    this.pausePlayerMovement();
+    this.promptText?.setVisible(false);
+    eventBus.emit("ui:open", { modal });
+  }
+
+  private pausePlayerMovement() {
+    this.player.setVelocity(0, 0);
+    this.player.setAngle(0);
   }
 
   private getNearestNpcAction(): HubAction | null {
