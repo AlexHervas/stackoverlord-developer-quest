@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { createMusicControl } from "./ui/musicControl";
 
 const MENU_COLORS = {
   background: "#15100b",
@@ -22,14 +23,12 @@ const MENU_AUDIO = {
   music: {
     key: "menuMusic",
     path: "assets/audio/menu_theme.ogg",
-    volume: 0.16,
+    volume: 0.03,
   },
 };
 
 export default class MenuScene extends Phaser.Scene {
-  private menuMusic?: Phaser.Sound.BaseSound;
-  private musicControlText?: Phaser.GameObjects.Text;
-  private isMusicEnabled = false;
+  private musicControl?: ReturnType<typeof createMusicControl>;
 
   constructor() {
     super("MenuScene");
@@ -55,7 +54,10 @@ export default class MenuScene extends Phaser.Scene {
     this.createMusicControl(width, height);
 
     this.input.keyboard?.once("keydown-ENTER", () => this.startGame());
-    this.input.keyboard?.on("keydown-M", this.toggleMenuMusic, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.musicControl?.destroy();
+      this.musicControl = undefined;
+    });
   }
 
   private createBackground(width: number, height: number) {
@@ -143,7 +145,7 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   private startGame() {
-    this.menuMusic?.stop();
+    this.musicControl?.stop();
 
     if (this.cache.audio.exists(MENU_AUDIO.select.key)) {
       this.sound.play(MENU_AUDIO.select.key, {
@@ -158,48 +160,14 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   private createMusicControl(width: number, height: number) {
-    this.musicControlText = this.add
-      .text(width / 2, height / 2 + 61, "[M] MUSIC OFF", {
+    this.musicControl = createMusicControl(this, MENU_AUDIO.music, {
+      x: width / 2,
+      y: height / 2 + 61,
+      style: {
         fontFamily: "monospace",
         fontSize: "7px",
         color: MENU_COLORS.footer,
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-
-    this.musicControlText.on("pointerdown", () => this.toggleMenuMusic());
-  }
-
-  private toggleMenuMusic() {
-    if (!this.cache.audio.exists(MENU_AUDIO.music.key)) return;
-
-    if (!this.menuMusic) {
-      this.menuMusic = this.sound.add(MENU_AUDIO.music.key, {
-        loop: true,
-        volume: MENU_AUDIO.music.volume,
-      });
-    }
-
-    if (this.isMusicEnabled) {
-      this.menuMusic.pause();
-      this.isMusicEnabled = false;
-      this.updateMusicControlText();
-      return;
-    }
-
-    if (this.menuMusic.isPaused) {
-      this.menuMusic.resume();
-    } else {
-      this.menuMusic.play();
-    }
-
-    this.isMusicEnabled = true;
-    this.updateMusicControlText();
-  }
-
-  private updateMusicControlText() {
-    this.musicControlText?.setText(
-      this.isMusicEnabled ? "[M] MUSIC ON" : "[M] MUSIC OFF",
-    );
+      },
+    });
   }
 }
