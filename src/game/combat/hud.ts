@@ -18,7 +18,7 @@ export function createStaticTexts(
     .setScrollFactor(0);
 
   scene.add
-    .text(config.arenaWidth - 4, 2, "ESP: ATTACK | ESC: HUB", {
+    .text(config.arenaWidth - 4, 2, "SPACE: ATTACK | ESC: HUB", {
       fontFamily: "monospace",
       fontSize: config.uiFont,
       color: "#05F521",

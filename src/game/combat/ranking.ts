@@ -52,7 +52,7 @@ export function getPlayerId() {
 }
 
 export function formatRankingRows(ranking: RankingEntry[]) {
-  if (ranking.length === 0) return ["SIN RECORDS TODAVIA"];
+  if (ranking.length === 0) return ["NO RECORDS YET"];
 
   return ranking.map((entry, index) => {
     const position = String(index + 1).padStart(2, "0");

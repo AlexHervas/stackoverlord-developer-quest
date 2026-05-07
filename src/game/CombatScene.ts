@@ -237,13 +237,13 @@ export default class CombatScene extends Phaser.Scene {
   private createArenaMap() {
     const map = this.make.tilemap({ key: "combatArena" });
     const tileset = map.addTilesetImage("combat_tiles", "combatTiles");
-    if (!tileset) throw new Error("Tileset de arena no encontrado");
+    if (!tileset) throw new Error("Arena tileset not found");
 
     const groundLayer = map.createLayer("Ground", tileset);
     const wallsLayer = map.createLayer("Walls", tileset);
     const decorationLayer = map.createLayer("Decoration", tileset);
     if (!groundLayer || !wallsLayer || !decorationLayer) {
-      throw new Error("Faltan capas en combatArena.json");
+      throw new Error("Missing layers in combatArena.json");
     }
 
     wallsLayer.setCollisionByProperty({ collides: true });
@@ -530,7 +530,7 @@ export default class CombatScene extends Phaser.Scene {
 
     this.isChangingRound = true;
     this.round += 1;
-    this.messageText.setText(`RONDA ${this.round}`).setVisible(true);
+    this.messageText.setText(`ROUND ${this.round}`).setVisible(true);
 
     this.time.delayedCall(ROUND_START_DELAY, () => {
       if (!this.isGameOver) this.startRound();
@@ -554,22 +554,22 @@ export default class CombatScene extends Phaser.Scene {
     if (!hasBestScore() || this.finalScore > bestScore) {
       this.isEnteringName = true;
       this.messageText
-        .setText(`NUEVO RECORD: ${this.finalScore}`)
+        .setText(`NEW RECORD: ${this.finalScore}`)
         .setVisible(true);
-      this.showRanking("ESCRIBE NOMBRE + ENTER");
+      this.showRanking("TYPE NAME + ENTER");
       this.updateNameInput();
     } else {
       this.messageText
-        .setText(`HAS CAIDO. SCORE: ${this.finalScore}`)
+        .setText(`YOU FELL. SCORE: ${this.finalScore}`)
         .setVisible(true);
-      this.showRanking("E: REINTENTAR | ESC: HUB");
+      this.showRanking("E: RETRY | ESC: HUB");
     }
   }
 
   private updateHud() {
-    this.roundText.setText(`RONDA: ${this.round}`);
-    this.healthText.setText(`VIDA: ${this.health}`);
-    this.enemiesText.setText(`ENEMIGOS: ${this.enemies.countActive(true)}`);
+    this.roundText.setText(`ROUND: ${this.round}`);
+    this.healthText.setText(`HEALTH: ${this.health}`);
+    this.enemiesText.setText(`ENEMIES: ${this.enemies.countActive(true)}`);
     this.scoreText.setText(`SCORE: ${this.calculateScore()}`);
   }
 
@@ -665,8 +665,8 @@ export default class CombatScene extends Phaser.Scene {
 
   private updateNameInput() {
     const visibleName = this.nameDraft.padEnd(MAX_NAME_LENGTH, "_");
-    this.nameInputText.setText(`NOMBRE: ${visibleName}`).setVisible(true);
-    this.controlsText.setText("ENTER: GUARDAR | ESC: HUB").setVisible(true);
+    this.nameInputText.setText(`NAME: ${visibleName}`).setVisible(true);
+    this.controlsText.setText("ENTER: SAVE | ESC: HUB").setVisible(true);
   }
 
   private saveRecord() {
@@ -685,8 +685,8 @@ export default class CombatScene extends Phaser.Scene {
 
     this.isEnteringName = false;
     this.nameInputText.setVisible(false);
-    this.messageText.setText(`GUARDADO: ${entry.name} ${entry.score}`);
-    this.showRanking("E: REINTENTAR | ESC: HUB");
+    this.messageText.setText(`SAVED: ${entry.name} ${entry.score}`);
+    this.showRanking("E: RETRY | ESC: HUB");
   }
 
   private showRanking(footer: string) {
@@ -698,7 +698,7 @@ export default class CombatScene extends Phaser.Scene {
         "TOP 10 ARENA",
         ...rows,
         "",
-        `KILLS: ${this.kills}  RONDA: ${this.round}  TIEMPO: ${this.finalSeconds}S`,
+        `KILLS: ${this.kills}  ROUND: ${this.round}  TIME: ${this.finalSeconds}S`,
       ])
       .setVisible(true);
     this.controlsText.setText(footer).setVisible(true);
