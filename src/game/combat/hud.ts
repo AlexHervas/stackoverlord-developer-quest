@@ -3,12 +3,13 @@ import type {
   CombatHudConfig,
   CombatHudTexts,
   CombatOverlayTexts,
+  CombatStaticTexts,
 } from "./types";
 
 export function createStaticTexts(
   scene: Phaser.Scene,
   config: CombatHudConfig,
-) {
+): CombatStaticTexts {
   scene.add
     .text(4, 2, "ARENA", {
       fontFamily: "monospace",
@@ -17,16 +18,24 @@ export function createStaticTexts(
     })
     .setScrollFactor(0);
 
-  scene.add
-    .text(config.arenaWidth - 4, 2, "SPACE: ATTACK | ESC: HUB", {
-      fontFamily: "monospace",
-      fontSize: config.uiFont,
-      color: "#05F521",
-      backgroundColor: "rgba(0,0,0,0.72)",
-      padding: { x: 4, y: 2 },
-    })
-    .setOrigin(1, 0)
-    .setScrollFactor(0);
+  const attackHintText = scene.add
+    .text(
+      config.arenaWidth / 2,
+      config.arenaHeight - 8,
+      "SPACE: ATTACK | ESC: HUB",
+      {
+        fontFamily: "monospace",
+        fontSize: config.uiFont,
+        color: "#ffe7a2",
+        backgroundColor: "rgba(0,0,0,0.72)",
+        padding: { x: 4, y: 2 },
+      },
+    )
+    .setOrigin(0.5, 1)
+    .setScrollFactor(0)
+    .setDepth(10);
+
+  return { attackHintText };
 }
 
 export function createHudTexts(

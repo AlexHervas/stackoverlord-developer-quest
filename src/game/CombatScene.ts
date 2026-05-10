@@ -13,6 +13,7 @@ import {
   saveBestScore,
   saveRankingEntry,
 } from "./combat/ranking";
+import { createMusicControl } from "./ui/musicControl";
 import type { RankingEntry, SpawnPoint } from "./combat/types";
 
 const ARENA_WIDTH = 320;
@@ -77,6 +78,13 @@ const HUD_CONFIG = {
   titleFont: TITLE_FONT,
   uiFont: UI_FONT,
 };
+const COMBAT_AUDIO = {
+  music: {
+    key: "combatSceneMusic",
+    path: "assets/audio/combatScene_theme.ogg",
+    volume: 0.18,
+  },
+};
 
 export default class CombatScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -109,6 +117,8 @@ export default class CombatScene extends Phaser.Scene {
   private rankingText!: Phaser.GameObjects.Text;
   private nameInputText!: Phaser.GameObjects.Text;
   private controlsText!: Phaser.GameObjects.Text;
+  private attackHintText!: Phaser.GameObjects.Text;
+  private musicControl?: ReturnType<typeof createMusicControl>;
 
   constructor() {
     super("CombatScene");
@@ -120,6 +130,7 @@ export default class CombatScene extends Phaser.Scene {
     this.load.image("playerSprite", "assets/player.png");
     this.load.image("phantom", "assets/phantom.png");
     this.load.image("spyder", "assets/spyder.png");
+    this.load.audio(COMBAT_AUDIO.music.key, COMBAT_AUDIO.music.path);
   }
 
   create() {
@@ -128,11 +139,12 @@ export default class CombatScene extends Phaser.Scene {
     this.setupCamera();
     const wallsLayer = this.createArenaMap();
 
-    createStaticTexts(this, HUD_CONFIG);
+    this.setupStaticTexts();
     this.createPlayerAndEnemies(wallsLayer);
     this.setupInput();
     this.setupHudTexts();
     this.setupOverlayTexts();
+    this.createMusicControl();
     this.setupLifecycleListeners();
 
     this.startRound();
@@ -291,12 +303,37 @@ export default class CombatScene extends Phaser.Scene {
     window.addEventListener("blur", this.handleWindowBlur);
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.musicControl?.destroy();
+      this.musicControl = undefined;
       this.input.keyboard?.off("keydown", this.handleNameInput, this);
       window.removeEventListener("blur", this.handleWindowBlur);
       document.removeEventListener(
         "visibilitychange",
         this.handleVisibilityChange,
       );
+    });
+  }
+
+  private setupStaticTexts() {
+    const staticTexts = createStaticTexts(this, HUD_CONFIG);
+    this.attackHintText = staticTexts.attackHintText;
+  }
+
+  private createMusicControl() {
+    this.musicControl = createMusicControl(this, COMBAT_AUDIO.music, {
+      x: ARENA_WIDTH - 4,
+      y: 2,
+      origin: [1, 0],
+      scrollFactor: 0,
+      depth: 20,
+      canToggle: () => !this.isEnteringName,
+      style: {
+        fontFamily: "monospace",
+        fontSize: "7px",
+        color: "#ffe7a2",
+        backgroundColor: "rgba(0,0,0,0.72)",
+        padding: { x: 4, y: 2 },
+      },
     });
   }
 
@@ -542,6 +579,7 @@ export default class CombatScene extends Phaser.Scene {
     this.finalScore = this.calculateScore();
     this.isGameOver = true;
     this.health = 0;
+    this.attackHintText.setVisible(false);
     this.player.setVisible(false);
     this.player.disableBody(false, false);
     this.getActiveEnemies().forEach((enemy) => {
@@ -583,6 +621,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private returnToHub() {
     this.player.setVelocity(0, 0);
+    this.musicControl?.stop();
     this.cameras.main.fadeOut(250, 0, 0, 0);
     this.cameras.main.once(
       Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,

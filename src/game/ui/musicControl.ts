@@ -12,6 +12,7 @@ type MusicControlOptions = {
   origin?: [number, number];
   depth?: number;
   scrollFactor?: number;
+  canToggle?: () => boolean;
 };
 
 type MusicControl = {
@@ -45,6 +46,7 @@ export function createMusicControl(
   };
 
   const toggle = () => {
+    if (options.canToggle && !options.canToggle()) return;
     if (!scene.cache.audio.exists(musicConfig.key)) return;
 
     if (!music) {

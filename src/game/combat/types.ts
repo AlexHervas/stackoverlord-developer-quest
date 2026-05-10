@@ -29,6 +29,10 @@ export type CombatHudTexts = {
   scoreText: Phaser.GameObjects.Text;
 };
 
+export type CombatStaticTexts = {
+  attackHintText: Phaser.GameObjects.Text;
+};
+
 export type CombatOverlayTexts = {
   messageText: Phaser.GameObjects.Text;
   rankingText: Phaser.GameObjects.Text;
