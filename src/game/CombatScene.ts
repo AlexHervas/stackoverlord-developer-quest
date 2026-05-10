@@ -8,9 +8,7 @@ import {
   formatRankingRows,
   getBestScore,
   getPlayerId,
-  hasBestScore,
   loadRanking,
-  saveBestScore,
   saveRankingEntry,
 } from "./combat/ranking";
 import { createMusicControl } from "./ui/musicControl";
@@ -101,6 +99,8 @@ export default class CombatScene extends Phaser.Scene {
   private isChangingRound = false;
   private isGameOver = false;
   private isEnteringName = false;
+  private isCheckingScore = false;
+  private isSavingRecord = false;
   private kills = 0;
   private activeStartedAt = 0;
   private activeElapsedMs = 0;
@@ -203,6 +203,8 @@ export default class CombatScene extends Phaser.Scene {
     if (!this.isGameOver) return false;
 
     this.player.setVelocity(0, 0);
+    if (this.isCheckingScore || this.isSavingRecord) return true;
+
     if (
       !this.isEnteringName &&
       Phaser.Input.Keyboard.JustDown(this.retryKey)
@@ -221,6 +223,8 @@ export default class CombatScene extends Phaser.Scene {
     this.isChangingRound = false;
     this.isGameOver = false;
     this.isEnteringName = false;
+    this.isCheckingScore = false;
+    this.isSavingRecord = false;
     this.kills = 0;
     this.activeStartedAt = Date.now();
     this.activeElapsedMs = 0;
@@ -464,7 +468,7 @@ export default class CombatScene extends Phaser.Scene {
     this.startPlayerInvulnerabilityFeedback();
 
     if (this.health <= 0) {
-      this.endGame();
+      void this.endGame();
     }
 
     this.updateHud();
@@ -574,7 +578,7 @@ export default class CombatScene extends Phaser.Scene {
     });
   }
 
-  private endGame() {
+  private async endGame() {
     this.finalSeconds = this.getSurvivedSeconds();
     this.finalScore = this.calculateScore();
     this.isGameOver = true;
@@ -587,20 +591,25 @@ export default class CombatScene extends Phaser.Scene {
       enemy.disableBody(true, true);
     });
 
-    const bestScore = getBestScore();
+    this.messageText.setText("CHECKING SCORE...").setVisible(true);
+    this.isCheckingScore = true;
+    const playerId = getPlayerId();
+    const bestScore = await getBestScore(playerId);
+    this.isCheckingScore = false;
+    if (!this.scene.isActive()) return;
 
-    if (!hasBestScore() || this.finalScore > bestScore) {
+    if (!bestScore.hasBestScore || this.finalScore > bestScore.score) {
       this.isEnteringName = true;
       this.messageText
         .setText(`NEW RECORD: ${this.finalScore}`)
         .setVisible(true);
-      this.showRanking("TYPE NAME + ENTER");
+      void this.showRanking("TYPE NAME + ENTER");
       this.updateNameInput();
     } else {
       this.messageText
         .setText(`YOU FELL. SCORE: ${this.finalScore}`)
         .setVisible(true);
-      this.showRanking("E: RETRY | ESC: HUB");
+      void this.showRanking("E: RETRY | ESC: HUB");
     }
   }
 
@@ -680,9 +689,10 @@ export default class CombatScene extends Phaser.Scene {
 
   private handleNameInput(event: KeyboardEvent) {
     if (!this.isEnteringName) return;
+    if (this.isSavingRecord) return;
 
     if (event.key === "Enter") {
-      this.saveRecord();
+      void this.saveRecord();
       return;
     }
 
@@ -708,7 +718,8 @@ export default class CombatScene extends Phaser.Scene {
     this.controlsText.setText("ENTER: SAVE | ESC: HUB").setVisible(true);
   }
 
-  private saveRecord() {
+  private async saveRecord() {
+    this.isSavingRecord = true;
     const entry: RankingEntry = {
       playerId: getPlayerId(),
       name: this.nameDraft.trim() || "ANON",
@@ -719,17 +730,20 @@ export default class CombatScene extends Phaser.Scene {
       date: new Date().toISOString(),
     };
 
-    saveRankingEntry(entry);
-    saveBestScore(this.finalScore);
+    this.controlsText.setText("SAVING...");
+    await saveRankingEntry(entry);
+    if (!this.scene.isActive()) return;
 
+    this.isSavingRecord = false;
     this.isEnteringName = false;
     this.nameInputText.setVisible(false);
     this.messageText.setText(`SAVED: ${entry.name} ${entry.score}`);
-    this.showRanking("E: RETRY | ESC: HUB");
+    await this.showRanking("E: RETRY | ESC: HUB");
   }
 
-  private showRanking(footer: string) {
-    const ranking = loadRanking();
+  private async showRanking(footer: string) {
+    const ranking = await loadRanking();
+    if (!this.scene.isActive()) return;
     const rows = formatRankingRows(ranking);
 
     this.rankingText

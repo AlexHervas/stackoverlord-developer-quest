@@ -4,42 +4,70 @@ export const RANKING_KEY = "portfolioCombatRanking";
 export const BEST_SCORE_KEY = "portfolioCombatBestScore";
 export const PLAYER_ID_KEY = "portfolioCombatPlayerId";
 
-export function loadRanking(): RankingEntry[] {
-  const rawRanking = window.localStorage.getItem(RANKING_KEY);
-  if (!rawRanking) return [];
+type BestScore = {
+  score: number;
+  hasBestScore: boolean;
+};
+
+const API_BASE_URL = import.meta.env.VITE_RANKING_API_BASE_URL?.replace(
+  /\/$/,
+  "",
+);
+
+export async function loadRanking(): Promise<RankingEntry[]> {
+  if (!API_BASE_URL) return loadLocalRanking();
 
   try {
-    const ranking = JSON.parse(rawRanking) as RankingEntry[];
-    if (!Array.isArray(ranking)) return [];
-    return ranking.filter(isRankingEntry).slice(0, 10);
+    const response = await fetch(`${API_BASE_URL}/combat-ranking`);
+    if (!response.ok) throw new Error("Ranking request failed");
+
+    const data = (await response.json()) as unknown;
+    const ranking = parseRankingResponse(data);
+    return ranking ?? loadLocalRanking();
   } catch {
-    return [];
+    return loadLocalRanking();
   }
 }
 
-export function saveRankingEntry(entry: RankingEntry) {
-  const ranking = [
-    ...loadRanking().filter((record) => {
-      return record.playerId !== entry.playerId;
-    }),
-    entry,
-  ]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
+export async function saveRankingEntry(entry: RankingEntry): Promise<void> {
+  if (!API_BASE_URL) {
+    saveLocalRankingEntry(entry);
+    saveLocalBestScore(entry.score);
+    return;
+  }
 
-  window.localStorage.setItem(RANKING_KEY, JSON.stringify(ranking));
+  try {
+    const response = await fetch(`${API_BASE_URL}/combat-ranking`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(entry),
+    });
+
+    if (!response.ok) throw new Error("Save ranking request failed");
+  } catch {
+    saveLocalRankingEntry(entry);
+    saveLocalBestScore(entry.score);
+  }
 }
 
-export function getBestScore() {
-  return Number(window.localStorage.getItem(BEST_SCORE_KEY) ?? 0);
-}
+export async function getBestScore(playerId: string): Promise<BestScore> {
+  if (!API_BASE_URL) return getLocalBestScore();
 
-export function saveBestScore(score: number) {
-  window.localStorage.setItem(BEST_SCORE_KEY, String(score));
-}
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/combat-ranking/best?playerId=${encodeURIComponent(
+        playerId,
+      )}`,
+    );
+    if (!response.ok) throw new Error("Best score request failed");
 
-export function hasBestScore() {
-  return window.localStorage.getItem(BEST_SCORE_KEY) !== null;
+    const data = (await response.json()) as unknown;
+    return parseBestScoreResponse(data) ?? getLocalBestScore();
+  } catch {
+    return getLocalBestScore();
+  }
 }
 
 export function getPlayerId() {
@@ -60,8 +88,77 @@ export function formatRankingRows(ranking: RankingEntry[]) {
   });
 }
 
-function isRankingEntry(entry: RankingEntry) {
+function parseRankingResponse(data: unknown): RankingEntry[] | null {
+  const ranking = Array.isArray(data)
+    ? data
+    : isRecord(data) && Array.isArray(data.ranking)
+      ? data.ranking
+      : null;
+
+  if (!ranking) return null;
+  return ranking.filter(isRankingEntry).slice(0, 10);
+}
+
+function parseBestScoreResponse(data: unknown): BestScore | null {
+  if (!isRecord(data)) return null;
+
+  const score = Number(data.score);
+  if (!Number.isFinite(score)) return null;
+
+  return {
+    score,
+    hasBestScore: data.hasBestScore === true,
+  };
+}
+
+function loadLocalRanking(): RankingEntry[] {
+  const rawRanking = window.localStorage.getItem(RANKING_KEY);
+  if (!rawRanking) return [];
+
+  try {
+    const ranking = JSON.parse(rawRanking) as unknown;
+    return parseRankingResponse(ranking) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalRankingEntry(entry: RankingEntry) {
+  const ranking = [
+    ...loadLocalRanking().filter((record) => {
+      return record.playerId !== entry.playerId;
+    }),
+    entry,
+  ]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+
+  window.localStorage.setItem(RANKING_KEY, JSON.stringify(ranking));
+}
+
+function getLocalBestScore(): BestScore {
+  const rawBestScore = window.localStorage.getItem(BEST_SCORE_KEY);
+  if (rawBestScore === null) {
+    return { score: 0, hasBestScore: false };
+  }
+
+  const score = Number(rawBestScore);
+  return {
+    score: Number.isFinite(score) ? score : 0,
+    hasBestScore: true,
+  };
+}
+
+function saveLocalBestScore(score: number) {
+  const current = getLocalBestScore();
+  if (!current.hasBestScore || score > current.score) {
+    window.localStorage.setItem(BEST_SCORE_KEY, String(score));
+  }
+}
+
+function isRankingEntry(entry: unknown): entry is RankingEntry {
   return (
+    isRecord(entry) &&
     typeof entry.name === "string" &&
     typeof entry.score === "number" &&
     typeof entry.round === "number" &&
@@ -69,4 +166,8 @@ function isRankingEntry(entry: RankingEntry) {
     typeof entry.seconds === "number" &&
     typeof entry.date === "string"
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
