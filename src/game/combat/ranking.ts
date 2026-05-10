@@ -1,8 +1,19 @@
 import type { RankingEntry } from "./types";
+import { hasSupabaseConfig, supabase } from "./supabaseClient";
 
 export const RANKING_KEY = "portfolioCombatRanking";
 export const BEST_SCORE_KEY = "portfolioCombatBestScore";
 export const PLAYER_ID_KEY = "portfolioCombatPlayerId";
+
+type RankingRow = {
+  player_id?: unknown;
+  name?: unknown;
+  score?: unknown;
+  round?: unknown;
+  kills?: unknown;
+  seconds?: unknown;
+  created_at?: unknown;
+};
 
 type BestScore = {
   score: number;
@@ -15,6 +26,7 @@ const API_BASE_URL = import.meta.env.VITE_RANKING_API_BASE_URL?.replace(
 );
 
 export async function loadRanking(): Promise<RankingEntry[]> {
+  if (hasSupabaseConfig) return loadSupabaseRanking();
   if (!API_BASE_URL) return loadLocalRanking();
 
   try {
@@ -30,6 +42,11 @@ export async function loadRanking(): Promise<RankingEntry[]> {
 }
 
 export async function saveRankingEntry(entry: RankingEntry): Promise<void> {
+  if (hasSupabaseConfig) {
+    await saveSupabaseRankingEntry(entry);
+    return;
+  }
+
   if (!API_BASE_URL) {
     saveLocalRankingEntry(entry);
     saveLocalBestScore(entry.score);
@@ -53,6 +70,7 @@ export async function saveRankingEntry(entry: RankingEntry): Promise<void> {
 }
 
 export async function getBestScore(playerId: string): Promise<BestScore> {
+  if (hasSupabaseConfig) return getSupabaseBestScore(playerId);
   if (!API_BASE_URL) return getLocalBestScore();
 
   try {
@@ -65,6 +83,73 @@ export async function getBestScore(playerId: string): Promise<BestScore> {
 
     const data = (await response.json()) as unknown;
     return parseBestScoreResponse(data) ?? getLocalBestScore();
+  } catch {
+    return getLocalBestScore();
+  }
+}
+
+async function loadSupabaseRanking(): Promise<RankingEntry[]> {
+  if (!supabase) return loadLocalRanking();
+
+  try {
+    const { data, error } = await supabase
+      .from("combat_ranking")
+      .select("player_id,name,score,round,kills,seconds,created_at")
+      .order("score", { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+    return parseSupabaseRankingRows(data) ?? loadLocalRanking();
+  } catch {
+    return loadLocalRanking();
+  }
+}
+
+async function saveSupabaseRankingEntry(entry: RankingEntry): Promise<void> {
+  if (!supabase) {
+    saveLocalRankingEntry(entry);
+    saveLocalBestScore(entry.score);
+    return;
+  }
+
+  try {
+    const { error } = await supabase.from("combat_ranking").upsert(
+      {
+        player_id: entry.playerId,
+        name: entry.name,
+        score: entry.score,
+        round: entry.round,
+        kills: entry.kills,
+        seconds: entry.seconds,
+      },
+      { onConflict: "player_id" },
+    );
+
+    if (error) throw error;
+  } catch {
+    saveLocalRankingEntry(entry);
+    saveLocalBestScore(entry.score);
+  }
+}
+
+async function getSupabaseBestScore(playerId: string): Promise<BestScore> {
+  if (!supabase) return getLocalBestScore();
+
+  try {
+    const { data, error } = await supabase
+      .from("combat_ranking")
+      .select("score")
+      .eq("player_id", playerId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      return { score: 0, hasBestScore: false };
+    }
+
+    const score = Number(data.score);
+    if (!Number.isFinite(score)) return getLocalBestScore();
+    return { score, hasBestScore: true };
   } catch {
     return getLocalBestScore();
   }
@@ -97,6 +182,41 @@ function parseRankingResponse(data: unknown): RankingEntry[] | null {
 
   if (!ranking) return null;
   return ranking.filter(isRankingEntry).slice(0, 10);
+}
+
+function parseSupabaseRankingRows(data: unknown): RankingEntry[] | null {
+  if (!Array.isArray(data)) return null;
+
+  return data
+    .map((row): RankingEntry | null => {
+      if (!isRecord(row)) return null;
+
+      const rankingRow = row as RankingRow;
+      if (
+        typeof rankingRow.name !== "string" ||
+        typeof rankingRow.score !== "number" ||
+        typeof rankingRow.round !== "number" ||
+        typeof rankingRow.kills !== "number" ||
+        typeof rankingRow.seconds !== "number" ||
+        typeof rankingRow.created_at !== "string"
+      ) {
+        return null;
+      }
+
+      return {
+        playerId:
+          typeof rankingRow.player_id === "string"
+            ? rankingRow.player_id
+            : undefined,
+        name: rankingRow.name,
+        score: rankingRow.score,
+        round: rankingRow.round,
+        kills: rankingRow.kills,
+        seconds: rankingRow.seconds,
+        date: rankingRow.created_at,
+      };
+    })
+    .filter((entry): entry is RankingEntry => entry !== null);
 }
 
 function parseBestScoreResponse(data: unknown): BestScore | null {
