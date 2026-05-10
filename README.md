@@ -166,6 +166,28 @@ npm run preview
 
 Supabase may show warnings for intentionally public leaderboard policies. This project uses RLS and limited grants, but the leaderboard remains public by design.
 
+## Deployment
+
+This project can be deployed as a Vite app on Vercel. It does not require a separate Render backend because the only remote data layer is Supabase.
+
+Recommended Vercel settings:
+
+| Setting | Value |
+| --- | --- |
+| Framework Preset | Vite |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Install Command | `npm install` |
+
+Add these environment variables in the Vercel project settings for Production and Preview deployments:
+
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_PUBLISHABLE_KEY=
+```
+
+Do not add Supabase `service_role` or secret keys to Vercel for this frontend-only deployment.
+
 ## Available Scripts
 
 | Script | Description |
