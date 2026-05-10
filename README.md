@@ -1,69 +1,216 @@
-# React + TypeScript + Vite
+# StackOverlord: Developer Quest
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interactive developer portfolio built as a small pixel-art game.
 
-Currently, two official plugins are available:
+Instead of a traditional landing page, this project presents portfolio content through explorable scenes, NPC interactions, modal windows and a survival arena with an online leaderboard.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Overview
 
-## Expanding the ESLint configuration
+StackOverlord: Developer Quest is a React + Phaser portfolio experience. The player starts from a menu, enters a small world, talks to a mage, reaches a hub area, opens CV/About content through NPCs and can enter an arena combat scene.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+The app uses React for the DOM shell and portfolio modals, while Phaser manages the game canvas, scenes, movement, collisions, dialogue, audio, combat and scene transitions.
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Live Demo
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+Pending deployment.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Features
+
+- Pixel-art game portfolio experience.
+- Phaser scene flow: menu, intro room, hub and combat arena.
+- Keyboard movement and interactions.
+- Typewriter dialogue with speech sound.
+- React modals for CV and About content.
+- Per-scene music controls with `[M] MUSIC OFF/ON`.
+- Survival arena with rounds, enemies, score and local game-over flow.
+- Supabase-powered combat leaderboard.
+- `localStorage` fallback when Supabase is not configured or unavailable.
+- Responsive fullscreen canvas using Phaser scale handling.
+
+## Controls
+
+| Key | Action |
+| --- | --- |
+| Arrow keys | Move |
+| Enter | Start game from the menu |
+| E | Interact, continue, retry or save depending on context |
+| Space | Attack in the arena |
+| M | Toggle scene music |
+| Esc | Go back or close modal depending on context |
+
+## Tech Stack
+
+- React 19
+- TypeScript
+- Vite
+- Phaser 3.90
+- Tiled
+- Tailwind CSS
+- Supabase
+- ESLint
+
+## Project Architecture
+
+The project is split between React and Phaser responsibilities:
+
+- React mounts the application shell, owns DOM modals and listens to UI events.
+- Phaser owns the game loop, scenes, physics, tilemaps, player movement, combat and audio.
+- Tiled is used to build the game maps and export JSON tilemaps consumed by Phaser.
+- A small typed event bus connects Phaser scenes with React UI.
+- Supabase stores the public arena leaderboard.
+- Static assets are served from `public/assets`.
+
+## Folder Structure
+
+```text
+src/
+  components/
+    GameCanvas.tsx        React wrapper around the Phaser game
+    PortfolioModal.tsx    CV and About modal content
+  game/
+    BootScene.ts          Starts the Phaser scene flow
+    MenuScene.ts          Title screen and start flow
+    PlayScene.ts          Intro room, mage dialogue and transition to Hub
+    HubScene.ts           NPC hub for CV, About and Arena
+    CombatScene.ts        Survival arena gameplay
+    combat/
+      hud.ts              Combat HUD builders
+      ranking.ts          Ranking storage layer with Supabase + fallback
+      supabaseClient.ts   Supabase client setup
+      types.ts            Combat-related TypeScript types
+    events/
+      events.ts           Typed Phaser-to-React event bus
+    ui/
+      musicControl.ts     Shared music toggle UI
+public/
+  assets/                 Pixel art, tilemaps, audio and CV PDF
+supabase/
+  combat-ranking.sql      SQL setup for the combat leaderboard
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Game Flow
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. `MenuScene` shows the title screen and starts the game.
+2. `PlayScene` introduces the world through a mage dialogue.
+3. `HubScene` lets the player interact with CV, About and Arena NPCs.
+4. `CombatScene` starts the survival arena and leaderboard flow.
+5. The arena returns to the Hub when pressing `Esc`.
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Maps and Scene Design
+
+The playable rooms and arena are built from Tiled JSON maps using the pixel-art assets in `public/assets`.
+
+Phaser loads those maps as tilemaps, creates the `Ground`, `Walls` and `Decoration` layers, and uses collision properties from the map layers to keep player movement and scene boundaries consistent.
+
+## Supabase Leaderboard
+
+Supabase is used to store the arena leaderboard in the `combat_ranking` table.
+
+The leaderboard keeps one entry per `player_id` and the SQL trigger in `supabase/combat-ranking.sql` prevents a lower score from replacing a better one.
+
+If Supabase is not configured or the request fails, the game falls back to `localStorage` so the arena remains playable.
+
+This leaderboard is suitable for a public portfolio/demo game. Scores are not server-verified, so a production competitive leaderboard would require a backend validation layer.
+
+## Environment Variables
+
+Copy `.env.example` into `.env.local` and fill in your Supabase project values:
+
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_PUBLISHABLE_KEY=
 ```
+
+Only use Supabase publishable/client-safe keys in Vite. Do not expose `service_role` or secret keys in frontend code.
+
+## Getting Started
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create local environment variables:
+
+```bash
+cp .env.example .env.local
+```
+
+Run the development server:
+
+```bash
+npm run dev
+```
+
+Build for production:
+
+```bash
+npm run build
+```
+
+Preview the production build:
+
+```bash
+npm run preview
+```
+
+## Supabase Setup
+
+1. Create a Supabase project.
+2. Open the SQL Editor.
+3. Run the SQL from `supabase/combat-ranking.sql`.
+4. Copy your project URL and publishable key into `.env.local`.
+5. Restart the Vite dev server.
+6. Play the arena and save a score to verify the `combat_ranking` table.
+
+Supabase may show warnings for intentionally public leaderboard policies. This project uses RLS and limited grants, but the leaderboard remains public by design.
+
+## Available Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start Vite development server |
+| `npm run build` | Type-check and build production assets |
+| `npm run lint` | Run ESLint |
+| `npm run preview` | Preview the production build |
+
+## Manual Test Checklist
+
+- Start from the menu with `Enter`.
+- Move through the intro room with arrow keys.
+- Talk to the mage with `E`.
+- Enter the Hub.
+- Open and close CV/About modals.
+- Toggle music in each scene with `M`.
+- Enter the Arena.
+- Attack with `Space`.
+- Lose a run, save a score and verify the leaderboard.
+- Return from Arena to Hub with `Esc`.
+
+## Assets and Audio Credits
+
+Visual and audio assets used in this portfolio come from:
+
+- https://kenney.nl/
+- https://pixabay.com/es/
+- https://soundimage.org/
+- https://patrickdearteaga.com/
+
+## Known Limitations
+
+- Live deployment is pending.
+- Arena scores are public and not server-verified.
+- There are no touch/mobile controls yet.
+- The production bundle can be large because Phaser and Supabase are bundled with the app.
+
+## Author
+
+Alejandro Hervas Gonzalez
+
+- GitHub: https://github.com/AlexHervas
+- Email: stackoverlord.dev@gmail.com
+
+## License
+
+This project is licensed under the MIT License. See `LICENSE` for details.

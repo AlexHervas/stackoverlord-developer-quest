@@ -41,7 +41,7 @@ const modalContent: Record<UiModal, ModalContent> = {
     actions: [
       {
         label: "Download CV",
-        href: "/assets/cv/CV_Alejandro_Hervas_2025.pdf",
+        href: "/assets/cv/CV_Alejandro_Hervas.pdf",
         download: true,
       },
     ],
