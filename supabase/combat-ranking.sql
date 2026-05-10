@@ -20,7 +20,26 @@ begin
 end;
 $$;
 
+create or replace function public.keep_best_combat_score()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.score < old.score then
+    return old;
+  end if;
+
+  return new;
+end;
+$$;
+
 drop trigger if exists combat_ranking_set_updated_at on public.combat_ranking;
+drop trigger if exists combat_ranking_keep_best_score on public.combat_ranking;
+
+create trigger combat_ranking_keep_best_score
+before update on public.combat_ranking
+for each row
+execute function public.keep_best_combat_score();
 
 create trigger combat_ranking_set_updated_at
 before update on public.combat_ranking
