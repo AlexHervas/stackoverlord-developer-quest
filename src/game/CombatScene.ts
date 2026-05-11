@@ -122,8 +122,10 @@ export default class CombatScene extends Phaser.Scene {
   private controlsText!: Phaser.GameObjects.Text;
   private attackHintText!: Phaser.GameObjects.Text;
   private musicControl?: ReturnType<typeof createMusicControl>;
+  private removeNameInputReadyListener?: () => void;
   private removeNameInputChangeListener?: () => void;
   private removeNameInputSubmitListener?: () => void;
+  private isHtmlNameInputReady = false;
 
   constructor() {
     super("CombatScene");
@@ -283,6 +285,7 @@ export default class CombatScene extends Phaser.Scene {
     this.finalScore = 0;
     this.finalSeconds = 0;
     this.nameDraft = "";
+    this.isHtmlNameInputReady = false;
     this.facing.set(1, 0);
   }
 
@@ -777,7 +780,9 @@ export default class CombatScene extends Phaser.Scene {
 
   private updateNameInput() {
     const visibleName = this.nameDraft.padEnd(MAX_NAME_LENGTH, "_");
-    this.nameInputText.setText(`NAME: ${visibleName}`).setVisible(true);
+    this.nameInputText
+      .setText(`NAME: ${visibleName}`)
+      .setVisible(!this.isHtmlNameInputReady);
   }
 
   private showNameEntryPrompt() {
@@ -793,6 +798,14 @@ export default class CombatScene extends Phaser.Scene {
       value: this.nameDraft,
       maxLength: MAX_NAME_LENGTH,
     });
+    this.removeNameInputReadyListener = eventBus.on(
+      "combat:name-input:ready",
+      () => {
+        if (!this.isEnteringName) return;
+        this.isHtmlNameInputReady = true;
+        this.nameInputText.setVisible(false);
+      },
+    );
     this.removeNameInputChangeListener = eventBus.on(
       "combat:name-input:change",
       ({ value }) => {
@@ -811,10 +824,13 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private closeNameInput() {
+    this.removeNameInputReadyListener?.();
     this.removeNameInputChangeListener?.();
     this.removeNameInputSubmitListener?.();
+    this.removeNameInputReadyListener = undefined;
     this.removeNameInputChangeListener = undefined;
     this.removeNameInputSubmitListener = undefined;
+    this.isHtmlNameInputReady = false;
     eventBus.emit("combat:name-input:close", undefined);
   }
 

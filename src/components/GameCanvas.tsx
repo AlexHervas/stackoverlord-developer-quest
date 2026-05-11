@@ -13,6 +13,13 @@ import CombatNameInput from "./CombatNameInput";
 
 const BASE_WIDTH = 320;
 const BASE_HEIGHT = 160;
+const TOUCH_INPUT_QUERY = "(hover: none), (pointer: coarse)";
+
+function hasTouchControls() {
+  return (
+    window.matchMedia(TOUCH_INPUT_QUERY).matches || navigator.maxTouchPoints > 0
+  );
+}
 
 export default function GameCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -22,6 +29,7 @@ export default function GameCanvas() {
     value: string;
     maxLength: number;
   } | null>(null);
+  const [hasTouchInput, setHasTouchInput] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -70,6 +78,20 @@ export default function GameCanvas() {
       window.removeEventListener("resize", refreshScale);
       window.removeEventListener("orientationchange", refreshScale);
       window.visualViewport?.removeEventListener("resize", refreshScale);
+    };
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(TOUCH_INPUT_QUERY);
+    const updateTouchInput = () => {
+      setHasTouchInput(hasTouchControls());
+    };
+
+    updateTouchInput();
+    mediaQuery.addEventListener("change", updateTouchInput);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateTouchInput);
     };
   }, []);
 
@@ -131,7 +153,9 @@ export default function GameCanvas() {
         />
       )}
 
-      {combatNameInput && <CombatNameInput {...combatNameInput} />}
+      {hasTouchInput && combatNameInput && (
+        <CombatNameInput {...combatNameInput} />
+      )}
 
       <MobileControls hidden={activeModal !== null} />
     </div>

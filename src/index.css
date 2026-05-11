@@ -127,12 +127,12 @@ a {
 .combat-name-input-wrap {
   position: fixed;
   left: 50%;
-  bottom: calc(max(96px, env(safe-area-inset-bottom) + 96px));
+  top: 57%;
   z-index: 6;
   display: flex;
   align-items: center;
   gap: 8px;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   border: 2px solid #4f2d16;
   background: rgba(79, 45, 22, 0.88);
   padding: 8px 10px;
@@ -171,5 +171,9 @@ a {
 @media (hover: none), (pointer: coarse) {
   .mobile-controls {
     display: block;
+  }
+
+  .combat-name-input-wrap {
+    top: 56%;
   }
 }

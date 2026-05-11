@@ -17,6 +17,7 @@ type EventsMap = {
   "ui:open": UiOpenEvent;
   "ui:close": undefined;
   "combat:name-input:open": CombatNameInputOpenEvent;
+  "combat:name-input:ready": undefined;
   "combat:name-input:change": CombatNameInputChangeEvent;
   "combat:name-input:submit": undefined;
   "combat:name-input:close": undefined;

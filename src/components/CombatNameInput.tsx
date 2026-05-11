@@ -17,6 +17,10 @@ export default function CombatNameInput({
     setDraft(value);
   }, [value]);
 
+  useEffect(() => {
+    eventBus.emit("combat:name-input:ready", undefined);
+  }, []);
+
   const updateDraft = (nextValue: string) => {
     const normalizedValue = nextValue
       .toUpperCase()
