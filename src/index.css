@@ -53,6 +53,7 @@ a {
 }
 
 .mobile-joystick {
+  pointer-events: auto;
   position: absolute;
   bottom: max(18px, env(safe-area-inset-bottom));
   left: max(14px, env(safe-area-inset-left));
