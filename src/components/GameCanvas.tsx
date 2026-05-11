@@ -58,6 +58,22 @@ export default function GameCanvas() {
   }, []);
 
   useEffect(() => {
+    const refreshScale = () => {
+      gameRef.current?.scale.refresh();
+    };
+
+    window.addEventListener("resize", refreshScale);
+    window.addEventListener("orientationchange", refreshScale);
+    window.visualViewport?.addEventListener("resize", refreshScale);
+
+    return () => {
+      window.removeEventListener("resize", refreshScale);
+      window.removeEventListener("orientationchange", refreshScale);
+      window.visualViewport?.removeEventListener("resize", refreshScale);
+    };
+  }, []);
+
+  useEffect(() => {
     const offOpen = eventBus.on("ui:open", ({ modal }) => {
       setActiveModal(modal);
     });
@@ -93,12 +109,17 @@ export default function GameCanvas() {
   }, [activeModal]);
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden">
+    <div
+      className="relative w-screen overflow-hidden"
+      style={{
+        height: "100dvh",
+      }}
+    >
       <div
         ref={containerRef}
         style={{
           width: "100vw",
-          height: "100vh",
+          height: "100dvh",
           overflow: "hidden",
         }}
       />
