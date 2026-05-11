@@ -4,9 +4,22 @@ export type UiOpenEvent = {
   modal: UiModal;
 };
 
+export type CombatNameInputOpenEvent = {
+  value: string;
+  maxLength: number;
+};
+
+export type CombatNameInputChangeEvent = {
+  value: string;
+};
+
 type EventsMap = {
   "ui:open": UiOpenEvent;
   "ui:close": undefined;
+  "combat:name-input:open": CombatNameInputOpenEvent;
+  "combat:name-input:change": CombatNameInputChangeEvent;
+  "combat:name-input:submit": undefined;
+  "combat:name-input:close": undefined;
 };
 
 type Handler<T> = (payload: T) => void;

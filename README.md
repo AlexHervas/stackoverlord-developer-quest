@@ -38,7 +38,7 @@ Pending deployment.
 | M | Toggle scene music |
 | Esc | Go back or close modal depending on context |
 
-On touch devices, the game shows an on-screen D-pad plus `A`, `Back` and `M` buttons.
+On touch devices, the game shows an on-screen D-pad plus `A`, `Back` and `M` buttons. Arena name entry uses a real text input so mobile keyboards can open.
 
 ## Tech Stack
 
@@ -225,7 +225,7 @@ Visual and audio assets used in this portfolio come from:
 
 - Live deployment is pending.
 - Arena scores are public and not server-verified.
-- Mobile name entry in the arena currently saves as `ANON` unless a physical keyboard is used.
+- Mobile controls may need small visual adjustments across different device aspect ratios.
 - The production bundle can be large because Phaser and Supabase are bundled with the app.
 
 ## Author

@@ -9,6 +9,7 @@ import CombatScene from "../game/CombatScene";
 import { eventBus, type UiModal } from "../game/events/events";
 import PortfolioModal from "./PortfolioModal";
 import MobileControls from "./MobileControls";
+import CombatNameInput from "./CombatNameInput";
 
 const BASE_WIDTH = 320;
 const BASE_HEIGHT = 160;
@@ -17,6 +18,10 @@ export default function GameCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const [activeModal, setActiveModal] = useState<UiModal | null>(null);
+  const [combatNameInput, setCombatNameInput] = useState<{
+    value: string;
+    maxLength: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -31,7 +36,7 @@ export default function GameCanvas() {
         antialias: false,
       },
       scale: {
-        mode: Phaser.Scale.ENVELOP, // Fullscreen sin barras
+        mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
         width: BASE_WIDTH,
         height: BASE_HEIGHT,
@@ -59,10 +64,18 @@ export default function GameCanvas() {
     const offClose = eventBus.on("ui:close", () => {
       setActiveModal(null);
     });
+    const offNameInputOpen = eventBus.on("combat:name-input:open", (input) => {
+      setCombatNameInput(input);
+    });
+    const offNameInputClose = eventBus.on("combat:name-input:close", () => {
+      setCombatNameInput(null);
+    });
 
     return () => {
       offOpen();
       offClose();
+      offNameInputOpen();
+      offNameInputClose();
     };
   }, []);
 
@@ -96,6 +109,8 @@ export default function GameCanvas() {
           onClose={() => eventBus.emit("ui:close", undefined)}
         />
       )}
+
+      {combatNameInput && <CombatNameInput {...combatNameInput} />}
 
       <MobileControls hidden={activeModal !== null} />
     </div>

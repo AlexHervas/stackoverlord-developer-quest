@@ -170,6 +170,50 @@ a {
   font-size: 11px;
 }
 
+.combat-name-input-wrap {
+  position: fixed;
+  left: 50%;
+  bottom: calc(max(96px, env(safe-area-inset-bottom) + 96px));
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  border: 2px solid #4f2d16;
+  background: rgba(79, 45, 22, 0.88);
+  padding: 8px 10px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.18),
+    0 4px 0 rgba(47, 29, 18, 0.8);
+}
+
+.combat-name-input-label {
+  color: #ffe7a2;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.combat-name-input {
+  width: min(190px, 54vw);
+  border: 0;
+  border-bottom: 2px solid #ffe7a2;
+  border-radius: 0;
+  background: transparent;
+  color: #f8efe0;
+  font-family: monospace;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0;
+  outline: none;
+  text-transform: uppercase;
+}
+
+.combat-name-input::placeholder {
+  color: rgba(248, 239, 224, 0.45);
+}
+
 @media (hover: none), (pointer: coarse) {
   .mobile-controls {
     display: block;

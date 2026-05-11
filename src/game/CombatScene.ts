@@ -11,6 +11,7 @@ import {
   loadRanking,
   saveRankingEntry,
 } from "./combat/ranking";
+import { eventBus } from "./events/events";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
 import type { RankingEntry, SpawnPoint } from "./combat/types";
@@ -121,6 +122,8 @@ export default class CombatScene extends Phaser.Scene {
   private controlsText!: Phaser.GameObjects.Text;
   private attackHintText!: Phaser.GameObjects.Text;
   private musicControl?: ReturnType<typeof createMusicControl>;
+  private removeNameInputChangeListener?: () => void;
+  private removeNameInputSubmitListener?: () => void;
 
   constructor() {
     super("CombatScene");
@@ -349,6 +352,7 @@ export default class CombatScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.musicControl?.destroy();
       this.musicControl = undefined;
+      this.closeNameInput();
       this.input.keyboard?.off("keydown", this.handleNameInput, this);
       window.removeEventListener("blur", this.handleWindowBlur);
       document.removeEventListener(
@@ -769,7 +773,39 @@ export default class CombatScene extends Phaser.Scene {
   private showNameEntryPrompt() {
     this.rankingText.setVisible(false);
     this.statsText.setVisible(false);
+    this.openNameInput();
     this.controlsText.setText("TYPE NAME + ENTER/A").setVisible(true);
+  }
+
+  private openNameInput() {
+    this.closeNameInput();
+    eventBus.emit("combat:name-input:open", {
+      value: this.nameDraft,
+      maxLength: MAX_NAME_LENGTH,
+    });
+    this.removeNameInputChangeListener = eventBus.on(
+      "combat:name-input:change",
+      ({ value }) => {
+        if (!this.isEnteringName || this.isSavingRecord) return;
+        this.nameDraft = value.slice(0, MAX_NAME_LENGTH);
+        this.updateNameInput();
+      },
+    );
+    this.removeNameInputSubmitListener = eventBus.on(
+      "combat:name-input:submit",
+      () => {
+        if (!this.isEnteringName || this.isSavingRecord) return;
+        void this.saveRecord();
+      },
+    );
+  }
+
+  private closeNameInput() {
+    this.removeNameInputChangeListener?.();
+    this.removeNameInputSubmitListener?.();
+    this.removeNameInputChangeListener = undefined;
+    this.removeNameInputSubmitListener = undefined;
+    eventBus.emit("combat:name-input:close", undefined);
   }
 
   private async saveRecord() {
@@ -790,6 +826,7 @@ export default class CombatScene extends Phaser.Scene {
 
     this.isSavingRecord = false;
     this.isEnteringName = false;
+    this.closeNameInput();
     this.nameInputText.setVisible(false);
     this.messageText.setText(`SAVED: ${entry.name} ${entry.score}`);
     await this.showRanking("E/A: RETRY | ESC/BACK: HUB");
