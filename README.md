@@ -38,6 +38,8 @@ Pending deployment.
 | M | Toggle scene music |
 | Esc | Go back or close modal depending on context |
 
+On touch devices, the game shows an on-screen D-pad plus `A`, `Back` and `M` buttons.
+
 ## Tech Stack
 
 - React 19
@@ -223,7 +225,7 @@ Visual and audio assets used in this portfolio come from:
 
 - Live deployment is pending.
 - Arena scores are public and not server-verified.
-- There are no touch/mobile controls yet.
+- Mobile name entry in the arena currently saves as `ANON` unless a physical keyboard is used.
 - The production bundle can be large because Phaser and Supabase are bundled with the app.
 
 ## Author

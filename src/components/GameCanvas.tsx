@@ -8,6 +8,7 @@ import HubScene from "../game/HubScene";
 import CombatScene from "../game/CombatScene";
 import { eventBus, type UiModal } from "../game/events/events";
 import PortfolioModal from "./PortfolioModal";
+import MobileControls from "./MobileControls";
 
 const BASE_WIDTH = 320;
 const BASE_HEIGHT = 160;
@@ -95,6 +96,8 @@ export default function GameCanvas() {
           onClose={() => eventBus.emit("ui:close", undefined)}
         />
       )}
+
+      <MobileControls hidden={activeModal !== null} />
     </div>
   );
 }

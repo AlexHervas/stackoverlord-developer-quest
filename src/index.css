@@ -10,4 +10,168 @@ body,
 body {
   overflow: hidden;
   background: #0f172a; /* o bg-slate-900 */
+  touch-action: none;
+  user-select: none;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-controls {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: none;
+}
+
+.mobile-control-button {
+  pointer-events: auto;
+  min-width: 48px;
+  min-height: 48px;
+  touch-action: none;
+  border: 2px solid #4f2d16;
+  background: rgba(143, 78, 34, 0.78);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.24),
+    0 3px 0 rgba(47, 29, 18, 0.9);
+  color: #ffe7a2;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.mobile-control-button:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 1px 0 rgba(47, 29, 18, 0.9);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mobile-dpad {
+  position: absolute;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  left: max(14px, env(safe-area-inset-left));
+  width: 156px;
+  height: 156px;
+  display: grid;
+  grid-template-columns: repeat(3, 52px);
+  grid-template-rows: repeat(3, 52px);
+  border: 3px solid rgba(79, 45, 22, 0.9);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at center, rgba(255, 231, 162, 0.22) 0 20px, transparent 21px),
+    radial-gradient(circle at center, rgba(143, 78, 34, 0.72), rgba(47, 29, 18, 0.62));
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -5px 0 rgba(47, 29, 18, 0.5),
+    0 4px 0 rgba(47, 29, 18, 0.8);
+}
+
+.mobile-dpad .mobile-control-button {
+  min-width: 52px;
+  min-height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mobile-dpad .mobile-control-button:active {
+  transform: none;
+  background: rgba(255, 231, 162, 0.18);
+  box-shadow: none;
+}
+
+.dpad-core {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+  justify-self: center;
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(255, 231, 162, 0.36);
+  border-radius: 999px;
+  background: rgba(47, 29, 18, 0.42);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.16),
+    0 2px 0 rgba(47, 29, 18, 0.7);
+}
+
+.mobile-actions {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: 56px 56px;
+  grid-template-rows: 42px 64px;
+  gap: 8px;
+  align-items: end;
+}
+
+.dpad-up {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.dpad-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.dpad-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.dpad-down {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.music-button {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 42px;
+  min-height: 42px;
+  font-size: 12px;
+}
+
+.primary-button {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 64px;
+  min-height: 64px;
+  border-color: #145c2a;
+  background: rgba(20, 92, 42, 0.82);
+  font-size: 22px;
+}
+
+.back-button {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 56px;
+  min-height: 48px;
+  font-size: 11px;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .mobile-controls {
+    display: block;
+  }
 }

@@ -36,6 +36,7 @@ export type CombatStaticTexts = {
 export type CombatOverlayTexts = {
   messageText: Phaser.GameObjects.Text;
   rankingText: Phaser.GameObjects.Text;
+  statsText: Phaser.GameObjects.Text;
   nameInputText: Phaser.GameObjects.Text;
   controlsText: Phaser.GameObjects.Text;
 };

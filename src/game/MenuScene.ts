@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
 
 const MENU_COLORS = {
@@ -29,6 +30,7 @@ const MENU_AUDIO = {
 
 export default class MenuScene extends Phaser.Scene {
   private musicControl?: ReturnType<typeof createMusicControl>;
+  private isStartingGame = false;
 
   constructor() {
     super("MenuScene");
@@ -58,6 +60,12 @@ export default class MenuScene extends Phaser.Scene {
       this.musicControl?.destroy();
       this.musicControl = undefined;
     });
+  }
+
+  update() {
+    if (virtualInput.consumeAction("primary")) {
+      this.startGame();
+    }
   }
 
   private createBackground(width: number, height: number) {
@@ -116,7 +124,7 @@ export default class MenuScene extends Phaser.Scene {
 
   private createPrompt(width: number, height: number) {
     const keyText = this.add
-      .text(width / 2, height / 2 + 24, "Press Enter to start", {
+      .text(width / 2, height / 2 + 24, "Enter / A to start", {
         fontFamily: "monospace",
         fontSize: "12px",
         color: MENU_COLORS.accent,
@@ -134,7 +142,7 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     this.add
-      .text(width / 2, height / 2 + 47, "Arrow keys to move", {
+      .text(width / 2, height / 2 + 47, "Arrow keys / D-pad to move", {
         fontFamily: "monospace",
         fontSize: "9px",
         color: MENU_COLORS.footer,
@@ -145,6 +153,8 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   private startGame() {
+    if (this.isStartingGame) return;
+    this.isStartingGame = true;
     this.musicControl?.stop();
 
     if (this.cache.audio.exists(MENU_AUDIO.select.key)) {

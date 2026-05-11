@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { eventBus, type UiModal } from "./events/events";
+import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
 
 const ROOM_WIDTH = 320;
@@ -108,7 +109,7 @@ export default class HubScene extends Phaser.Scene {
     );
 
     this.promptText = this.add
-      .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, "E to interact", {
+      .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, "E / A to interact", {
         ...UI_STYLE,
       })
       .setOrigin(0.5)
@@ -146,16 +147,25 @@ export default class HubScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    if (this.cursors.left?.isDown) {
+    if (this.cursors.left?.isDown || virtualInput.isDirectionDown("left")) {
       vx = -1;
       this.player.setFlipX(true);
-    } else if (this.cursors.right?.isDown) {
+    } else if (
+      this.cursors.right?.isDown ||
+      virtualInput.isDirectionDown("right")
+    ) {
       vx = 1;
       this.player.setFlipX(false);
     }
 
-    if (this.cursors.up?.isDown) vy = -1;
-    else if (this.cursors.down?.isDown) vy = 1;
+    if (this.cursors.up?.isDown || virtualInput.isDirectionDown("up")) {
+      vy = -1;
+    } else if (
+      this.cursors.down?.isDown ||
+      virtualInput.isDirectionDown("down")
+    ) {
+      vy = 1;
+    }
 
     this.player.setAngle(vx === 0 ? 0 : vx < 0 ? -3 : 3);
 
@@ -163,7 +173,10 @@ export default class HubScene extends Phaser.Scene {
     if (velocity.lengthSq() > 0) velocity.normalize().scale(SPEED);
     this.player.setVelocity(velocity.x, velocity.y);
 
-    if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+    const backPressed = this.isBackJustPressed();
+    const interactPressed = this.isInteractJustPressed();
+
+    if (backPressed) {
       if (this.shouldIgnoreNextEsc) {
         this.shouldIgnoreNextEsc = false;
         return;
@@ -185,7 +198,7 @@ export default class HubScene extends Phaser.Scene {
     const action = this.getNearestNpcAction();
     this.promptText?.setVisible(action !== null);
 
-    if (action && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+    if (action && interactPressed) {
       if (this.cache.audio.exists("interactSound")) {
         this.sound.play("interactSound", { volume: 0.2 });
       }
@@ -199,6 +212,20 @@ export default class HubScene extends Phaser.Scene {
         this.scene.start("CombatScene");
       }
     }
+  }
+
+  private isBackJustPressed() {
+    return (
+      Phaser.Input.Keyboard.JustDown(this.escKey) ||
+      virtualInput.consumeAction("back")
+    );
+  }
+
+  private isInteractJustPressed() {
+    return (
+      Phaser.Input.Keyboard.JustDown(this.interactKey) ||
+      virtualInput.consumeAction("primary")
+    );
   }
 
   private createMusicControl() {

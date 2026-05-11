@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { virtualInput } from "../input/virtualInput";
 
 type MusicConfig = {
   key: string;
@@ -75,6 +76,7 @@ export function createMusicControl(
 
   controlText.on("pointerdown", toggle);
   scene.input.keyboard?.on("keydown-M", toggle);
+  const offVirtualMusic = virtualInput.onAction("music", toggle);
 
   return {
     stop: () => {
@@ -83,6 +85,7 @@ export function createMusicControl(
       updateText();
     },
     destroy: () => {
+      offVirtualMusic();
       scene.input.keyboard?.off("keydown-M", toggle);
       controlText.off("pointerdown", toggle);
       controlText.destroy();

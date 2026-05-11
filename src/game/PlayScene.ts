@@ -1,11 +1,13 @@
 import Phaser from "phaser";
+import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
 
 const ROOM_WIDTH = 320;
 const ROOM_HEIGHT = 160;
 const SPEED = 90;
 const TALK_DISTANCE = 18;
-const INTERACT_PROMPT = "E to interact";
+const INTERACT_PROMPT = "E / A to interact";
+const CONTINUE_PROMPT = "E / A";
 const DIALOG_TEXT = "Welcome to my realm. The road ahead leads to the city.";
 const UI_STYLE = {
   fontFamily: "monospace",
@@ -104,7 +106,7 @@ export default class PlayScene extends Phaser.Scene {
       nearMage && this.dialogueState === "closed",
     );
 
-    this.handleMageInteraction(nearMage);
+    this.handleMageInteraction(nearMage, this.isInteractJustPressed());
   }
 
   private resetSceneState() {
@@ -197,20 +199,29 @@ export default class PlayScene extends Phaser.Scene {
     let vectorY = 0;
 
     if (!isDialogueOpen) {
-      if (this.cursors?.left?.isDown) {
+      if (
+        this.cursors?.left?.isDown ||
+        virtualInput.isDirectionDown("left")
+      ) {
         vectorX = -1;
         this.player.setFlipX(true);
         this.player.setAngle(-3);
-      } else if (this.cursors?.right?.isDown) {
+      } else if (
+        this.cursors?.right?.isDown ||
+        virtualInput.isDirectionDown("right")
+      ) {
         vectorX = 1;
         this.player.setFlipX(false);
         this.player.setAngle(3);
       }
 
-      if (this.cursors?.up?.isDown) {
+      if (this.cursors?.up?.isDown || virtualInput.isDirectionDown("up")) {
         vectorY = -1;
         this.player.setAngle(2);
-      } else if (this.cursors?.down?.isDown) {
+      } else if (
+        this.cursors?.down?.isDown ||
+        virtualInput.isDirectionDown("down")
+      ) {
         vectorY = 1;
       } else if (vectorX === 0) {
         this.player.setAngle(0);
@@ -235,12 +246,8 @@ export default class PlayScene extends Phaser.Scene {
     );
   }
 
-  private handleMageInteraction(nearMage: boolean) {
-    if (
-      nearMage &&
-      !this.isChangingScene &&
-      Phaser.Input.Keyboard.JustDown(this.interactKey!)
-    ) {
+  private handleMageInteraction(nearMage: boolean, interactPressed: boolean) {
+    if (nearMage && !this.isChangingScene && interactPressed) {
       if (this.dialogueState === "closed") {
         this.openDialogue();
         return;
@@ -255,6 +262,13 @@ export default class PlayScene extends Phaser.Scene {
         this.startHubTransition();
       }
     }
+  }
+
+  private isInteractJustPressed() {
+    return (
+      Phaser.Input.Keyboard.JustDown(this.interactKey!) ||
+      virtualInput.consumeAction("primary")
+    );
   }
 
   private createMusicControl() {
@@ -301,7 +315,7 @@ export default class PlayScene extends Phaser.Scene {
       .setVisible(false);
 
     this.continueText = this.add
-      .text(ROOM_WIDTH - 44, ROOM_HEIGHT - 19, "Press E", {
+      .text(ROOM_WIDTH - 44, ROOM_HEIGHT - 19, CONTINUE_PROMPT, {
         fontFamily: "monospace",
         fontSize: "8px",
         color: "#ffe7a2",

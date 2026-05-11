@@ -21,17 +21,17 @@ export function createStaticTexts(
   const attackHintText = scene.add
     .text(
       config.arenaWidth / 2,
-      config.arenaHeight - 8,
-      "SPACE: ATTACK | ESC: HUB",
+      18,
+      "SPACE/A: ATTACK | ESC/BACK: HUB",
       {
         fontFamily: "monospace",
-        fontSize: config.uiFont,
+        fontSize: "9px",
         color: "#ffe7a2",
-        backgroundColor: "rgba(0,0,0,0.72)",
+        backgroundColor: "rgba(0,0,0,0.55)",
         padding: { x: 4, y: 2 },
       },
     )
-    .setOrigin(0.5, 1)
+    .setOrigin(0.5, 0)
     .setScrollFactor(0)
     .setDepth(10);
 
@@ -97,7 +97,7 @@ export function createOverlayTexts(
   config: CombatHudConfig,
 ): CombatOverlayTexts {
   const messageText = scene.add
-    .text(config.arenaWidth / 2, config.arenaHeight / 2 - 42, "", {
+    .text(config.arenaWidth / 2, 44, "", {
       fontFamily: "monospace",
       fontSize: config.uiFont,
       color: "#ffffff",
@@ -110,12 +110,12 @@ export function createOverlayTexts(
     .setDepth(20);
 
   const rankingText = scene.add
-    .text(config.arenaWidth / 2, config.arenaHeight / 2 - 18, "", {
+    .text(config.arenaWidth / 2, 60, "", {
       fontFamily: "monospace",
-      fontSize: config.uiFont,
+      fontSize: "10px",
       color: "#fff4bf",
       backgroundColor: "rgba(0,0,0,0.82)",
-      padding: { x: 7, y: 5 },
+      padding: { x: 6, y: 5 },
       align: "left",
     })
     .setOrigin(0.5, 0)
@@ -123,8 +123,21 @@ export function createOverlayTexts(
     .setScrollFactor(0)
     .setDepth(20);
 
+  const statsText = scene.add
+    .text(config.arenaWidth / 2, 32, "", {
+      fontFamily: "monospace",
+      fontSize: config.uiFont,
+      color: "#ffe7a2",
+      backgroundColor: "rgba(0,0,0,0.82)",
+      padding: { x: 5, y: 2 },
+    })
+    .setOrigin(0.5, 1)
+    .setVisible(false)
+    .setScrollFactor(0)
+    .setDepth(21);
+
   const nameInputText = scene.add
-    .text(config.arenaWidth / 2, config.arenaHeight / 2 + 45, "", {
+    .text(config.arenaWidth / 2, config.arenaHeight / 2 + 10, "", {
       fontFamily: "monospace",
       fontSize: config.uiFont,
       color: "#ffffff",
@@ -137,7 +150,7 @@ export function createOverlayTexts(
     .setDepth(20);
 
   const controlsText = scene.add
-    .text(config.arenaWidth / 2, config.arenaHeight - 8, "", {
+    .text(config.arenaWidth / 2, config.arenaHeight - 2, "", {
       fontFamily: "monospace",
       fontSize: config.uiFont,
       color: "#05F521",
@@ -152,6 +165,7 @@ export function createOverlayTexts(
   return {
     messageText,
     rankingText,
+    statsText,
     nameInputText,
     controlsText,
   };

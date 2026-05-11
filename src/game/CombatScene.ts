@@ -11,6 +11,7 @@ import {
   loadRanking,
   saveRankingEntry,
 } from "./combat/ranking";
+import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
 import type { RankingEntry, SpawnPoint } from "./combat/types";
 
@@ -115,6 +116,7 @@ export default class CombatScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private messageText!: Phaser.GameObjects.Text;
   private rankingText!: Phaser.GameObjects.Text;
+  private statsText!: Phaser.GameObjects.Text;
   private nameInputText!: Phaser.GameObjects.Text;
   private controlsText!: Phaser.GameObjects.Text;
   private attackHintText!: Phaser.GameObjects.Text;
@@ -159,14 +161,14 @@ export default class CombatScene extends Phaser.Scene {
     this.updatePlayerMovement(this.cursors);
     this.updateEnemies();
 
-    if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
+    if (this.isAttackJustPressed()) {
       this.attack();
     }
 
     this.updateHud();
     this.checkRoundComplete();
 
-    if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+    if (this.isBackJustPressed()) {
       this.returnToHub();
     }
   }
@@ -177,16 +179,25 @@ export default class CombatScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    if (cursors.left?.isDown) {
+    if (cursors.left?.isDown || virtualInput.isDirectionDown("left")) {
       vx = -1;
       this.player.setFlipX(true);
-    } else if (cursors.right?.isDown) {
+    } else if (
+      cursors.right?.isDown ||
+      virtualInput.isDirectionDown("right")
+    ) {
       vx = 1;
       this.player.setFlipX(false);
     }
 
-    if (cursors.up?.isDown) vy = -1;
-    else if (cursors.down?.isDown) vy = 1;
+    if (cursors.up?.isDown || virtualInput.isDirectionDown("up")) {
+      vy = -1;
+    } else if (
+      cursors.down?.isDown ||
+      virtualInput.isDirectionDown("down")
+    ) {
+      vy = 1;
+    }
 
     if (vx !== 0 || vy !== 0) {
       this.facing.set(vx, vy).normalize();
@@ -203,16 +214,45 @@ export default class CombatScene extends Phaser.Scene {
     if (!this.isGameOver) return false;
 
     this.player.setVelocity(0, 0);
+    const retryPressed = this.isRetryJustPressed();
+    const savePressed = this.isMobileSaveJustPressed();
+    const backPressed = this.isBackJustPressed();
+
     if (this.isCheckingScore || this.isSavingRecord) return true;
 
-    if (
-      !this.isEnteringName &&
-      Phaser.Input.Keyboard.JustDown(this.retryKey)
-    ) {
+    if (!this.isEnteringName && retryPressed) {
       this.scene.restart();
     }
-    if (Phaser.Input.Keyboard.JustDown(this.escKey)) this.returnToHub();
+    if (this.isEnteringName && savePressed) {
+      void this.saveRecord();
+    }
+    if (backPressed) this.returnToHub();
     return true;
+  }
+
+  private isAttackJustPressed() {
+    return (
+      Phaser.Input.Keyboard.JustDown(this.attackKey) ||
+      virtualInput.consumeAction("primary")
+    );
+  }
+
+  private isRetryJustPressed() {
+    return (
+      Phaser.Input.Keyboard.JustDown(this.retryKey) ||
+      virtualInput.consumeAction("primary")
+    );
+  }
+
+  private isMobileSaveJustPressed() {
+    return virtualInput.consumeAction("primary");
+  }
+
+  private isBackJustPressed() {
+    return (
+      Phaser.Input.Keyboard.JustDown(this.escKey) ||
+      virtualInput.consumeAction("back")
+    );
   }
 
   private resetCombatState() {
@@ -353,6 +393,7 @@ export default class CombatScene extends Phaser.Scene {
     const overlayTexts = createOverlayTexts(this, HUD_CONFIG);
     this.messageText = overlayTexts.messageText;
     this.rankingText = overlayTexts.rankingText;
+    this.statsText = overlayTexts.statsText;
     this.nameInputText = overlayTexts.nameInputText;
     this.controlsText = overlayTexts.controlsText;
   }
@@ -584,6 +625,7 @@ export default class CombatScene extends Phaser.Scene {
     this.isGameOver = true;
     this.health = 0;
     this.attackHintText.setVisible(false);
+    this.setCombatHudVisible(false);
     this.player.setVisible(false);
     this.player.disableBody(false, false);
     this.getActiveEnemies().forEach((enemy) => {
@@ -603,13 +645,13 @@ export default class CombatScene extends Phaser.Scene {
       this.messageText
         .setText(`NEW RECORD: ${this.finalScore}`)
         .setVisible(true);
-      void this.showRanking("TYPE NAME + ENTER");
+      this.showNameEntryPrompt();
       this.updateNameInput();
     } else {
       this.messageText
         .setText(`YOU FELL. SCORE: ${this.finalScore}`)
         .setVisible(true);
-      void this.showRanking("E: RETRY | ESC: HUB");
+      void this.showRanking("E/A: RETRY | ESC/BACK: HUB");
     }
   }
 
@@ -618,6 +660,13 @@ export default class CombatScene extends Phaser.Scene {
     this.healthText.setText(`HEALTH: ${this.health}`);
     this.enemiesText.setText(`ENEMIES: ${this.enemies.countActive(true)}`);
     this.scoreText.setText(`SCORE: ${this.calculateScore()}`);
+  }
+
+  private setCombatHudVisible(isVisible: boolean) {
+    this.roundText.setVisible(isVisible);
+    this.healthText.setVisible(isVisible);
+    this.enemiesText.setVisible(isVisible);
+    this.scoreText.setVisible(isVisible);
   }
 
   private getActiveEnemies() {
@@ -715,7 +764,12 @@ export default class CombatScene extends Phaser.Scene {
   private updateNameInput() {
     const visibleName = this.nameDraft.padEnd(MAX_NAME_LENGTH, "_");
     this.nameInputText.setText(`NAME: ${visibleName}`).setVisible(true);
-    this.controlsText.setText("ENTER: SAVE | ESC: HUB").setVisible(true);
+  }
+
+  private showNameEntryPrompt() {
+    this.rankingText.setVisible(false);
+    this.statsText.setVisible(false);
+    this.controlsText.setText("TYPE NAME + ENTER/A").setVisible(true);
   }
 
   private async saveRecord() {
@@ -738,23 +792,39 @@ export default class CombatScene extends Phaser.Scene {
     this.isEnteringName = false;
     this.nameInputText.setVisible(false);
     this.messageText.setText(`SAVED: ${entry.name} ${entry.score}`);
-    await this.showRanking("E: RETRY | ESC: HUB");
+    await this.showRanking("E/A: RETRY | ESC/BACK: HUB");
   }
 
   private async showRanking(footer: string) {
     const ranking = await loadRanking();
     if (!this.scene.isActive()) return;
-    const rows = formatRankingRows(ranking);
+    const rows = this.formatRankingColumns(formatRankingRows(ranking));
 
+    this.messageText.setY(48);
     this.rankingText
       .setText([
         "TOP 10 ARENA",
         ...rows,
-        "",
-        `KILLS: ${this.kills}  ROUND: ${this.round}  TIME: ${this.finalSeconds}S`,
       ])
       .setVisible(true);
+    this.statsText
+      .setText(
+        `KILLS: ${this.kills}  ROUND: ${this.round}  TIME: ${this.finalSeconds}S`,
+      )
+      .setVisible(true);
     this.controlsText.setText(footer).setVisible(true);
+  }
+
+  private formatRankingColumns(rows: string[]) {
+    const normalizedRows = rows.slice(0, 10);
+    const leftRows = normalizedRows.slice(0, 5);
+    const rightRows = normalizedRows.slice(5, 10);
+    const leftWidth = Math.max(...leftRows.map((row) => row.length), 16);
+
+    return leftRows.map((leftRow, index) => {
+      const rightRow = rightRows[index];
+      return rightRow ? `${leftRow.padEnd(leftWidth, " ")}  ${rightRow}` : leftRow;
+    });
   }
 
 }
