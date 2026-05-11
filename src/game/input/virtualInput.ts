@@ -58,4 +58,10 @@ export const virtualInput = {
     directionState.left = false;
     directionState.right = false;
   },
+
+  clearActions() {
+    consumedPresses.primary = actionPresses.primary;
+    consumedPresses.back = actionPresses.back;
+    consumedPresses.music = actionPresses.music;
+  },
 };

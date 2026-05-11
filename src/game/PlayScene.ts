@@ -72,6 +72,7 @@ export default class PlayScene extends Phaser.Scene {
   }
 
   create() {
+    virtualInput.clearActions();
     this.resetSceneState();
     const { wallsLayer, decorationLayer } = this.createRoomLayers();
     this.physics.world.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
@@ -421,6 +422,7 @@ export default class PlayScene extends Phaser.Scene {
     this.isChangingScene = true;
     this.closeDialogue();
     this.musicControl?.stop();
+    virtualInput.clearActions();
 
     this.cameras.main.fadeOut(250, 0, 0, 0);
     this.cameras.main.once(

@@ -139,6 +139,7 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   create() {
+    virtualInput.clearActions();
     this.resetCombatState();
     this.setupWorldBounds();
     this.setupCamera();
@@ -684,6 +685,7 @@ export default class CombatScene extends Phaser.Scene {
   private returnToHub() {
     this.player.setVelocity(0, 0);
     this.musicControl?.stop();
+    virtualInput.clearActions();
     this.cameras.main.fadeOut(250, 0, 0, 0);
     this.cameras.main.once(
       Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,

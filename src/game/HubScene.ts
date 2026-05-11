@@ -67,6 +67,7 @@ export default class HubScene extends Phaser.Scene {
   }
 
   create() {
+    virtualInput.clearActions();
     const map = this.make.tilemap({ key: "lvl2" });
     const tileset = map.addTilesetImage("tiles_level2", "tiles_image");
     if (!tileset) throw new Error("Tileset not found");
@@ -183,6 +184,7 @@ export default class HubScene extends Phaser.Scene {
       }
 
       this.musicControl?.stop();
+      virtualInput.clearActions();
       this.cameras.main.fadeOut(250, 0, 0, 0);
 
       this.cameras.main.once(
@@ -209,6 +211,7 @@ export default class HubScene extends Phaser.Scene {
         this.openNpcModal("about");
       } else if (action === "combat") {
         this.musicControl?.stop();
+        virtualInput.clearActions();
         this.scene.start("CombatScene");
       }
     }

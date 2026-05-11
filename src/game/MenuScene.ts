@@ -47,6 +47,7 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   create() {
+    virtualInput.clearActions();
     const { width, height } = this.scale;
 
     this.cameras.main.setBackgroundColor(MENU_COLORS.background);
@@ -156,6 +157,7 @@ export default class MenuScene extends Phaser.Scene {
     if (this.isStartingGame) return;
     this.isStartingGame = true;
     this.musicControl?.stop();
+    virtualInput.clearActions();
 
     if (this.cache.audio.exists(MENU_AUDIO.select.key)) {
       this.sound.play(MENU_AUDIO.select.key, {
