@@ -198,6 +198,7 @@ export default class PlayScene extends Phaser.Scene {
   private updatePlayerMovement(isDialogueOpen: boolean) {
     let vectorX = 0;
     let vectorY = 0;
+    const touchVector = virtualInput.getMoveVector();
 
     if (!isDialogueOpen) {
       if (
@@ -226,6 +227,23 @@ export default class PlayScene extends Phaser.Scene {
         vectorY = 1;
       } else if (vectorX === 0) {
         this.player.setAngle(0);
+      }
+
+      if (touchVector.x !== 0 || touchVector.y !== 0) {
+        vectorX = touchVector.x;
+        vectorY = touchVector.y;
+
+        if (touchVector.x < 0) {
+          this.player.setFlipX(true);
+          this.player.setAngle(-3);
+        } else if (touchVector.x > 0) {
+          this.player.setFlipX(false);
+          this.player.setAngle(3);
+        } else if (touchVector.y < 0) {
+          this.player.setAngle(2);
+        } else {
+          this.player.setAngle(0);
+        }
       }
     } else {
       this.player.setAngle(0);

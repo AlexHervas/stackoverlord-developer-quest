@@ -9,6 +9,10 @@ const directionState: Record<VirtualDirection, boolean> = {
   left: false,
   right: false,
 };
+const moveVector = {
+  x: 0,
+  y: 0,
+};
 
 const actionPresses: Record<VirtualAction, number> = {
   primary: 0,
@@ -31,6 +35,15 @@ export const virtualInput = {
 
   isDirectionDown(direction: VirtualDirection) {
     return directionState[direction];
+  },
+
+  setMoveVector(x: number, y: number) {
+    moveVector.x = x;
+    moveVector.y = y;
+  },
+
+  getMoveVector() {
+    return { ...moveVector };
   },
 
   pressAction(action: VirtualAction) {
@@ -57,6 +70,8 @@ export const virtualInput = {
     directionState.down = false;
     directionState.left = false;
     directionState.right = false;
+    moveVector.x = 0;
+    moveVector.y = 0;
   },
 
   clearActions() {

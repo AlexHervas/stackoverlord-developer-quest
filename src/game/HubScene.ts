@@ -147,6 +147,7 @@ export default class HubScene extends Phaser.Scene {
 
     let vx = 0;
     let vy = 0;
+    const touchVector = virtualInput.getMoveVector();
 
     if (this.cursors.left?.isDown || virtualInput.isDirectionDown("left")) {
       vx = -1;
@@ -168,7 +169,14 @@ export default class HubScene extends Phaser.Scene {
       vy = 1;
     }
 
+    if (touchVector.x !== 0 || touchVector.y !== 0) {
+      vx = touchVector.x;
+      vy = touchVector.y;
+    }
+
     this.player.setAngle(vx === 0 ? 0 : vx < 0 ? -3 : 3);
+    if (touchVector.x < 0) this.player.setFlipX(true);
+    if (touchVector.x > 0) this.player.setFlipX(false);
 
     const velocity = new Phaser.Math.Vector2(vx, vy);
     if (velocity.lengthSq() > 0) velocity.normalize().scale(SPEED);

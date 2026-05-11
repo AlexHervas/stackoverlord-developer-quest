@@ -1,17 +1,11 @@
-import { useEffect, type PointerEvent } from "react";
-import {
-  virtualInput,
-  type VirtualAction,
-  type VirtualDirection,
-} from "../game/input/virtualInput";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { virtualInput, type VirtualAction } from "../game/input/virtualInput";
+
+const JOYSTICK_RADIUS = 54;
+const JOYSTICK_DEADZONE = 8;
 
 type MobileControlsProps = {
   hidden: boolean;
-};
-
-type DirectionButtonProps = {
-  direction: VirtualDirection;
-  className: string;
 };
 
 type ActionButtonProps = {
@@ -20,40 +14,9 @@ type ActionButtonProps = {
   className?: string;
 };
 
-function stopPointer(event: PointerEvent<HTMLButtonElement>) {
+function stopPointer(event: PointerEvent<HTMLElement>) {
   event.preventDefault();
   event.stopPropagation();
-}
-
-function DirectionButton({
-  direction,
-  className,
-}: DirectionButtonProps) {
-  const press = (event: PointerEvent<HTMLButtonElement>) => {
-    stopPointer(event);
-    event.currentTarget.setPointerCapture(event.pointerId);
-    virtualInput.setDirection(direction, true);
-  };
-
-  const release = (event: PointerEvent<HTMLButtonElement>) => {
-    stopPointer(event);
-    virtualInput.setDirection(direction, false);
-  };
-
-  return (
-    <button
-      type="button"
-      aria-label={`Move ${direction}`}
-      className={`mobile-control-button ${className}`}
-      onPointerDown={press}
-      onPointerUp={release}
-      onPointerCancel={release}
-      onPointerLeave={release}
-      onContextMenu={(event) => event.preventDefault()}
-    >
-      <span className="sr-only">Move {direction}</span>
-    </button>
-  );
 }
 
 function ActionButton({ action, label, className = "" }: ActionButtonProps) {
@@ -75,6 +38,78 @@ function ActionButton({ action, label, className = "" }: ActionButtonProps) {
   );
 }
 
+function VirtualJoystick() {
+  const baseRef = useRef<HTMLDivElement | null>(null);
+  const activePointerId = useRef<number | null>(null);
+  const [thumbPosition, setThumbPosition] = useState({ x: 0, y: 0 });
+
+  const updateJoystick = (event: PointerEvent<HTMLDivElement>) => {
+    const base = baseRef.current;
+    if (!base) return;
+
+    const rect = base.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const rawX = event.clientX - centerX;
+    const rawY = event.clientY - centerY;
+    const distance = Math.hypot(rawX, rawY);
+    const clampedDistance = Math.min(distance, JOYSTICK_RADIUS);
+    const angle = Math.atan2(rawY, rawX);
+    const x = distance === 0 ? 0 : Math.cos(angle) * clampedDistance;
+    const y = distance === 0 ? 0 : Math.sin(angle) * clampedDistance;
+
+    setThumbPosition({ x, y });
+
+    if (clampedDistance < JOYSTICK_DEADZONE) {
+      virtualInput.setMoveVector(0, 0);
+      return;
+    }
+
+    virtualInput.setMoveVector(x / JOYSTICK_RADIUS, y / JOYSTICK_RADIUS);
+  };
+
+  const releaseJoystick = (event: PointerEvent<HTMLDivElement>) => {
+    stopPointer(event);
+
+    if (activePointerId.current === event.pointerId) {
+      activePointerId.current = null;
+    }
+
+    setThumbPosition({ x: 0, y: 0 });
+    virtualInput.setMoveVector(0, 0);
+  };
+
+  return (
+    <div
+      ref={baseRef}
+      className="mobile-joystick"
+      aria-label="Movement joystick"
+      role="application"
+      onPointerDown={(event) => {
+        stopPointer(event);
+        activePointerId.current = event.pointerId;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        updateJoystick(event);
+      }}
+      onPointerMove={(event) => {
+        if (activePointerId.current !== event.pointerId) return;
+        stopPointer(event);
+        updateJoystick(event);
+      }}
+      onPointerUp={releaseJoystick}
+      onPointerCancel={releaseJoystick}
+      onContextMenu={(event) => event.preventDefault()}
+    >
+      <div
+        className="mobile-joystick-thumb"
+        style={{
+          transform: `translate(${thumbPosition.x}px, ${thumbPosition.y}px)`,
+        }}
+      />
+    </div>
+  );
+}
+
 export default function MobileControls({ hidden }: MobileControlsProps) {
   useEffect(() => {
     if (hidden) virtualInput.releaseDirections();
@@ -86,13 +121,7 @@ export default function MobileControls({ hidden }: MobileControlsProps) {
 
   return (
     <div className="mobile-controls" aria-label="Touch controls">
-      <div className="mobile-dpad" aria-label="Movement controls">
-        <div className="dpad-core" aria-hidden="true" />
-        <DirectionButton direction="up" className="dpad-up" />
-        <DirectionButton direction="left" className="dpad-left" />
-        <DirectionButton direction="right" className="dpad-right" />
-        <DirectionButton direction="down" className="dpad-down" />
-      </div>
+      <VirtualJoystick />
 
       <div className="mobile-actions" aria-label="Action controls">
         <ActionButton action="music" label="M" className="music-button" />
