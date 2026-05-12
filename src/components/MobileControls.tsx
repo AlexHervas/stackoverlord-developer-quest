@@ -122,11 +122,11 @@ export default function MobileControls({ hidden }: MobileControlsProps) {
   return (
     <div className="mobile-controls" aria-label="Touch controls">
       <VirtualJoystick />
+      <ActionButton action="back" label="Back" className="back-button" />
 
       <div className="mobile-actions" aria-label="Action controls">
         <ActionButton action="music" label="M" className="music-button" />
         <ActionButton action="primary" label="A" className="primary-button" />
-        <ActionButton action="back" label="Back" className="back-button" />
       </div>
     </div>
   );
