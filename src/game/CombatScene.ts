@@ -84,6 +84,16 @@ const COMBAT_AUDIO = {
     path: "assets/audio/combatScene_theme.ogg",
     volume: 0.18,
   },
+  attack: {
+    key: "combatSwordSound",
+    path: "assets/audio/sword.ogg",
+    volume: 0.35,
+  },
+  playerHit: {
+    key: "combatPlayerHitSound",
+    path: "assets/audio/hit.ogg",
+    volume: 0.45,
+  },
 };
 
 export default class CombatScene extends Phaser.Scene {
@@ -138,6 +148,8 @@ export default class CombatScene extends Phaser.Scene {
     this.load.image("phantom", "assets/phantom.png");
     this.load.image("spyder", "assets/spyder.png");
     this.load.audio(COMBAT_AUDIO.music.key, COMBAT_AUDIO.music.path);
+    this.load.audio(COMBAT_AUDIO.attack.key, COMBAT_AUDIO.attack.path);
+    this.load.audio(COMBAT_AUDIO.playerHit.key, COMBAT_AUDIO.playerHit.path);
   }
 
   create() {
@@ -485,6 +497,7 @@ export default class CombatScene extends Phaser.Scene {
     if (this.time.now - this.lastAttackAt < ATTACK_COOLDOWN) return;
 
     this.lastAttackAt = this.time.now;
+    this.playCombatSound(COMBAT_AUDIO.attack);
     const attackCenter = this.getAttackCenter();
     const slash = this.createSlashEffect(this.player.x, this.player.y);
 
@@ -518,6 +531,7 @@ export default class CombatScene extends Phaser.Scene {
 
     this.lastDamageAt = this.time.now;
     this.health -= 1;
+    this.playCombatSound(COMBAT_AUDIO.playerHit);
     this.cameras.main.shake(
       PLAYER_HIT_SHAKE_DURATION,
       PLAYER_HIT_SHAKE_INTENSITY,
@@ -530,6 +544,11 @@ export default class CombatScene extends Phaser.Scene {
 
     this.updateHud();
   };
+
+  private playCombatSound(soundConfig: { key: string; volume: number }) {
+    if (!this.cache.audio.exists(soundConfig.key)) return;
+    this.sound.play(soundConfig.key, { volume: soundConfig.volume });
+  }
 
   private getAttackCenter() {
     return {
