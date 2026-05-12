@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { getMusicHint } from "../input/inputMode";
 import { virtualInput } from "../input/virtualInput";
+import { getMusicEnabled, setMusicEnabled } from "./musicState";
 
 type MusicConfig = {
   key: string;
@@ -30,7 +31,7 @@ export function createMusicControl(
   options: MusicControlOptions,
 ): MusicControl {
   let music: Phaser.Sound.BaseSound | undefined;
-  let isMusicEnabled = options.initialEnabled ?? false;
+  let isMusicEnabled = options.initialEnabled ?? getMusicEnabled();
 
   const controlText = scene.add
     .text(options.x, options.y, getMusicHint(isMusicEnabled), options.style)
@@ -51,7 +52,11 @@ export function createMusicControl(
 
   const setEnabled = (isEnabled: boolean) => {
     isMusicEnabled = isEnabled;
-    options.onEnabledChange?.(isMusicEnabled);
+    if (options.onEnabledChange) {
+      options.onEnabledChange(isMusicEnabled);
+    } else {
+      setMusicEnabled(isMusicEnabled);
+    }
     updateText();
   };
 
@@ -101,7 +106,7 @@ export function createMusicControl(
   return {
     stop: () => {
       music?.stop();
-      setEnabled(false);
+      updateText();
     },
     destroy: () => {
       offVirtualMusic();

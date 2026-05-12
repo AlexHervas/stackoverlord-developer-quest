@@ -11,10 +11,6 @@ import {
   loadRanking,
   saveRankingEntry,
 } from "./combat/ranking";
-import {
-  getCombatMusicEnabled,
-  setCombatMusicEnabled,
-} from "./combat/combatMusicState";
 import { eventBus } from "./events/events";
 import { getNameSubmitHint, getRetryHubHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
@@ -398,8 +394,6 @@ export default class CombatScene extends Phaser.Scene {
       scrollFactor: 0,
       depth: 20,
       canToggle: () => !this.isEnteringName,
-      initialEnabled: getCombatMusicEnabled(),
-      onEnabledChange: setCombatMusicEnabled,
       style: {
         fontFamily: "monospace",
         fontSize: "7px",
