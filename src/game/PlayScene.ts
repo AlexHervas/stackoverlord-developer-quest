@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { getContinueHint, getInteractHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
 
@@ -6,8 +7,6 @@ const ROOM_WIDTH = 320;
 const ROOM_HEIGHT = 160;
 const SPEED = 90;
 const TALK_DISTANCE = 18;
-const INTERACT_PROMPT = "E / A to interact";
-const CONTINUE_PROMPT = "E / A";
 const DIALOG_TEXT = "Welcome to my realm. The road ahead leads to the city.";
 const UI_STYLE = {
   fontFamily: "monospace",
@@ -167,7 +166,7 @@ export default class PlayScene extends Phaser.Scene {
 
   private createMagePrompt() {
     this.magePromptText = this.add
-      .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, INTERACT_PROMPT, UI_STYLE)
+      .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, getInteractHint(), UI_STYLE)
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(20)
@@ -334,7 +333,7 @@ export default class PlayScene extends Phaser.Scene {
       .setVisible(false);
 
     this.continueText = this.add
-      .text(ROOM_WIDTH - 44, ROOM_HEIGHT - 19, CONTINUE_PROMPT, {
+      .text(ROOM_WIDTH - 44, ROOM_HEIGHT - 19, getContinueHint(), {
         fontFamily: "monospace",
         fontSize: "8px",
         color: "#ffe7a2",

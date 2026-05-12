@@ -12,6 +12,7 @@ import {
   saveRankingEntry,
 } from "./combat/ranking";
 import { eventBus } from "./events/events";
+import { getNameSubmitHint, getRetryHubHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
 import type { RankingEntry, SpawnPoint } from "./combat/types";
@@ -686,7 +687,7 @@ export default class CombatScene extends Phaser.Scene {
       this.messageText
         .setText(`YOU FELL. SCORE: ${this.finalScore}`)
         .setVisible(true);
-      void this.showRanking("E/A: RETRY | ESC/BACK: HUB");
+      void this.showRanking(getRetryHubHint());
     }
   }
 
@@ -808,7 +809,7 @@ export default class CombatScene extends Phaser.Scene {
     this.rankingText.setVisible(false);
     this.statsText.setVisible(false);
     this.openNameInput();
-    this.controlsText.setText("TYPE NAME + ENTER/A").setVisible(true);
+    this.controlsText.setText(getNameSubmitHint()).setVisible(true);
   }
 
   private openNameInput() {
@@ -874,7 +875,7 @@ export default class CombatScene extends Phaser.Scene {
     this.closeNameInput();
     this.nameInputText.setVisible(false);
     this.messageText.setText(`SAVED: ${entry.name} ${entry.score}`);
-    await this.showRanking("E/A: RETRY | ESC/BACK: HUB");
+    await this.showRanking(getRetryHubHint());
   }
 
   private async showRanking(footer: string) {

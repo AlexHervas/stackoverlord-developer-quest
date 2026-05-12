@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { getMusicHint } from "../input/inputMode";
 import { virtualInput } from "../input/virtualInput";
 
 type MusicConfig = {
@@ -30,7 +31,7 @@ export function createMusicControl(
   let isMusicEnabled = false;
 
   const controlText = scene.add
-    .text(options.x, options.y, "[M] MUSIC OFF", options.style)
+    .text(options.x, options.y, getMusicHint(isMusicEnabled), options.style)
     .setOrigin(...(options.origin ?? [0.5, 0.5]))
     .setInteractive({ useHandCursor: true });
 
@@ -43,7 +44,7 @@ export function createMusicControl(
   }
 
   const updateText = () => {
-    controlText.setText(isMusicEnabled ? "[M] MUSIC ON" : "[M] MUSIC OFF");
+    controlText.setText(getMusicHint(isMusicEnabled));
   };
 
   const toggle = () => {

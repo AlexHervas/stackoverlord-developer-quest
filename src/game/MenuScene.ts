@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { getMoveHint, getStartHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
 
@@ -125,7 +126,7 @@ export default class MenuScene extends Phaser.Scene {
 
   private createPrompt(width: number, height: number) {
     const keyText = this.add
-      .text(width / 2, height / 2 + 24, "Enter / A to start", {
+      .text(width / 2, height / 2 + 24, getStartHint(), {
         fontFamily: "monospace",
         fontSize: "12px",
         color: MENU_COLORS.accent,
@@ -143,7 +144,7 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     this.add
-      .text(width / 2, height / 2 + 47, "Arrow keys / D-pad to move", {
+      .text(width / 2, height / 2 + 47, getMoveHint(), {
         fontFamily: "monospace",
         fontSize: "9px",
         color: MENU_COLORS.footer,

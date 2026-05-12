@@ -5,6 +5,7 @@ import type {
   CombatOverlayTexts,
   CombatStaticTexts,
 } from "./types";
+import { getAttackHubHint } from "../input/inputMode";
 
 export function createStaticTexts(
   scene: Phaser.Scene,
@@ -22,7 +23,7 @@ export function createStaticTexts(
     .text(
       config.arenaWidth / 2,
       18,
-      "SPACE/A: ATTACK | ESC/BACK: HUB",
+      getAttackHubHint(),
       {
         fontFamily: "monospace",
         fontSize: "9px",

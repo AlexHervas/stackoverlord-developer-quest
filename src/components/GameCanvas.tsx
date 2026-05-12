@@ -10,6 +10,7 @@ import { eventBus, type UiModal } from "../game/events/events";
 import PortfolioModal from "./PortfolioModal";
 import MobileControls from "./MobileControls";
 import CombatNameInput from "./CombatNameInput";
+import { setInputMode } from "../game/input/inputMode";
 
 const BASE_WIDTH = 320;
 const BASE_HEIGHT = 160;
@@ -38,6 +39,8 @@ export default function GameCanvas() {
   useEffect(() => {
     if (!containerRef.current) return;
     if (gameRef.current) return;
+
+    setInputMode(hasTouchControls() ? "touch" : "keyboard");
 
     gameRef.current = new Phaser.Game({
       type: Phaser.AUTO,
@@ -98,7 +101,9 @@ export default function GameCanvas() {
   useEffect(() => {
     const mediaQuery = window.matchMedia(TOUCH_INPUT_QUERY);
     const updateTouchInput = () => {
-      setHasTouchInput(hasTouchControls());
+      const nextHasTouchInput = hasTouchControls();
+      setInputMode(nextHasTouchInput ? "touch" : "keyboard");
+      setHasTouchInput(nextHasTouchInput);
     };
 
     updateTouchInput();

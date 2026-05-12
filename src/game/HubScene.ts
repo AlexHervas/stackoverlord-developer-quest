@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { eventBus, type UiModal } from "./events/events";
+import { getInteractHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
 
@@ -110,7 +111,7 @@ export default class HubScene extends Phaser.Scene {
     );
 
     this.promptText = this.add
-      .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, "E / A to interact", {
+      .text(ROOM_WIDTH / 2, ROOM_HEIGHT - 12, getInteractHint(), {
         ...UI_STYLE,
       })
       .setOrigin(0.5)
