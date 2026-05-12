@@ -107,6 +107,13 @@ const modalContent: Record<UiModal, ModalContent> = {
     ],
     projects: [
       {
+        name: "StackOverlord: Developer Quest",
+        description:
+          "Interactive developer portfolio built as a small pixel-art game with scenes, NPCs, touch controls and an online combat ranking.",
+        href: "https://github.com/AlexHervas/stackoverlord-developer-quest",
+        stack: "TypeScript, React, Phaser 3, Vite, Tailwind CSS, Supabase",
+      },
+      {
         name: "NoPiques",
         description:
           "AI-powered phishing detection app with a React frontend and Express backend.",
