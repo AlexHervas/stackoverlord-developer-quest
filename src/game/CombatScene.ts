@@ -11,6 +11,10 @@ import {
   loadRanking,
   saveRankingEntry,
 } from "./combat/ranking";
+import {
+  getCombatMusicEnabled,
+  setCombatMusicEnabled,
+} from "./combat/combatMusicState";
 import { eventBus } from "./events/events";
 import { getNameSubmitHint, getRetryHubHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
@@ -83,17 +87,17 @@ const COMBAT_AUDIO = {
   music: {
     key: "combatSceneMusic",
     path: "assets/audio/combatScene_theme.ogg",
-    volume: 0.18,
+    volume: 0.12,
   },
   attack: {
     key: "combatSwordSound",
     path: "assets/audio/sword.ogg",
-    volume: 0.35,
+    volume: 0.4,
   },
   playerHit: {
     key: "combatPlayerHitSound",
     path: "assets/audio/hit.ogg",
-    volume: 0.45,
+    volume: 0.5,
   },
 };
 
@@ -202,20 +206,14 @@ export default class CombatScene extends Phaser.Scene {
     if (cursors.left?.isDown || virtualInput.isDirectionDown("left")) {
       vx = -1;
       this.player.setFlipX(true);
-    } else if (
-      cursors.right?.isDown ||
-      virtualInput.isDirectionDown("right")
-    ) {
+    } else if (cursors.right?.isDown || virtualInput.isDirectionDown("right")) {
       vx = 1;
       this.player.setFlipX(false);
     }
 
     if (cursors.up?.isDown || virtualInput.isDirectionDown("up")) {
       vy = -1;
-    } else if (
-      cursors.down?.isDown ||
-      virtualInput.isDirectionDown("down")
-    ) {
+    } else if (cursors.down?.isDown || virtualInput.isDirectionDown("down")) {
       vy = 1;
     }
 
@@ -400,6 +398,8 @@ export default class CombatScene extends Phaser.Scene {
       scrollFactor: 0,
       depth: 20,
       canToggle: () => !this.isEnteringName,
+      initialEnabled: getCombatMusicEnabled(),
+      onEnabledChange: setCombatMusicEnabled,
       style: {
         fontFamily: "monospace",
         fontSize: "7px",
@@ -470,12 +470,8 @@ export default class CombatScene extends Phaser.Scene {
 
     const base = positions[index % positions.length];
     return {
-      x:
-        base.x +
-        Phaser.Math.Between(-ENEMY_SPAWN_JITTER, ENEMY_SPAWN_JITTER),
-      y:
-        base.y +
-        Phaser.Math.Between(-ENEMY_SPAWN_JITTER, ENEMY_SPAWN_JITTER),
+      x: base.x + Phaser.Math.Between(-ENEMY_SPAWN_JITTER, ENEMY_SPAWN_JITTER),
+      y: base.y + Phaser.Math.Between(-ENEMY_SPAWN_JITTER, ENEMY_SPAWN_JITTER),
     };
   }
 
@@ -884,12 +880,7 @@ export default class CombatScene extends Phaser.Scene {
     const rows = this.formatRankingColumns(formatRankingRows(ranking));
 
     this.messageText.setY(48);
-    this.rankingText
-      .setText([
-        "TOP 10 ARENA",
-        ...rows,
-      ])
-      .setVisible(true);
+    this.rankingText.setText(["TOP 10 ARENA", ...rows]).setVisible(true);
     this.statsText
       .setText(
         `KILLS: ${this.kills}  ROUND: ${this.round}  TIME: ${this.finalSeconds}S`,
@@ -906,8 +897,9 @@ export default class CombatScene extends Phaser.Scene {
 
     return leftRows.map((leftRow, index) => {
       const rightRow = rightRows[index];
-      return rightRow ? `${leftRow.padEnd(leftWidth, " ")}  ${rightRow}` : leftRow;
+      return rightRow
+        ? `${leftRow.padEnd(leftWidth, " ")}  ${rightRow}`
+        : leftRow;
     });
   }
-
 }
