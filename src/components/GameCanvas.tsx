@@ -21,6 +21,10 @@ function hasTouchControls() {
   );
 }
 
+function getViewportHeight() {
+  return window.visualViewport?.height ?? window.innerHeight;
+}
+
 export default function GameCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -66,10 +70,19 @@ export default function GameCanvas() {
   }, []);
 
   useEffect(() => {
+    const updateAppHeight = () => {
+      document.documentElement.style.setProperty(
+        "--app-height",
+        `${getViewportHeight()}px`,
+      );
+    };
+
     const refreshScale = () => {
+      updateAppHeight();
       gameRef.current?.scale.refresh();
     };
 
+    updateAppHeight();
     window.addEventListener("resize", refreshScale);
     window.addEventListener("orientationchange", refreshScale);
     window.visualViewport?.addEventListener("resize", refreshScale);
@@ -78,6 +91,7 @@ export default function GameCanvas() {
       window.removeEventListener("resize", refreshScale);
       window.removeEventListener("orientationchange", refreshScale);
       window.visualViewport?.removeEventListener("resize", refreshScale);
+      document.documentElement.style.removeProperty("--app-height");
     };
   }, []);
 
@@ -134,14 +148,14 @@ export default function GameCanvas() {
     <div
       className="relative w-screen overflow-hidden"
       style={{
-        height: "100dvh",
+        height: "var(--app-height, 100dvh)",
       }}
     >
       <div
         ref={containerRef}
         style={{
           width: "100vw",
-          height: "100dvh",
+          height: "var(--app-height, 100dvh)",
           overflow: "hidden",
         }}
       />

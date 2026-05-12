@@ -132,14 +132,15 @@ export default function PortfolioModal({
 
   return (
     <div
-      className="fixed inset-0 z-10 flex items-center justify-center bg-[#101014]/80 px-4 py-6 backdrop-blur-[2px]"
+      className="fixed inset-0 z-10 flex items-center justify-center bg-[#101014]/80 px-4 py-3 backdrop-blur-[2px] sm:py-6"
+      style={{ height: "var(--app-height, 100dvh)" }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="portfolio-modal-title"
       onMouseDown={onClose}
     >
       <section
-        className="relative max-h-full w-full max-w-2xl overflow-hidden border-4 border-[#4f2d16] bg-[#d3a45f] p-2 text-[#2f1d12] shadow-[0_18px_0_rgba(0,0,0,0.35),0_0_0_4px_rgba(18,11,6,0.65)]"
+        className="relative flex max-h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden border-4 border-[#4f2d16] bg-[#d3a45f] p-2 text-[#2f1d12] shadow-[0_18px_0_rgba(0,0,0,0.35),0_0_0_4px_rgba(18,11,6,0.65)]"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="pointer-events-none absolute inset-x-4 top-1 h-1 bg-[#f8df9b]/70" />
@@ -148,8 +149,9 @@ export default function PortfolioModal({
         <div className="pointer-events-none absolute inset-y-4 right-1 w-1 bg-[#6f3f1e]/45" />
 
         <div
-          className="max-h-[calc(100vh-4rem)] overflow-auto border-2 border-[#7a431f] bg-[#f2d58a] p-5 shadow-inner"
+          className="min-h-0 flex-1 overflow-y-auto border-2 border-[#7a431f] bg-[#f2d58a] p-4 shadow-inner sm:p-5"
           style={{
+            touchAction: "pan-y",
             backgroundImage:
               "radial-gradient(circle at 18% 15%, rgba(255,255,255,0.28) 0 1px, transparent 2px), radial-gradient(circle at 82% 72%, rgba(80,45,22,0.12) 0 1px, transparent 2px), linear-gradient(135deg, rgba(255,246,196,0.55), rgba(194,132,62,0.2))",
           }}
