@@ -139,7 +139,7 @@ export default function PortfolioModal({
 
   return (
     <div
-      className="fixed inset-0 z-10 flex items-center justify-center bg-[#101014]/80 px-4 py-3 backdrop-blur-[2px] sm:py-6"
+      className="fixed inset-0 z-10 flex items-center justify-center bg-[#101014]/82 px-4 py-3 sm:py-6"
       style={{ height: "var(--app-height, 100dvh)" }}
       role="dialog"
       aria-modal="true"
@@ -211,23 +211,22 @@ export default function PortfolioModal({
             </div>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="portfolio-sections-grid grid gap-4 md:grid-cols-2">
             {content.sections.map((section) => (
-              <article
-                key={section.title}
-                className="border-2 border-[#8f4e22] bg-[#ffe8aa]/55 p-4 shadow-[inset_0_0_0_2px_rgba(79,45,22,0.08)]"
-              >
-                <h3 className="mb-3 border-b border-[#8f4e22]/45 pb-2 font-mono text-sm font-black uppercase text-[#5e3218]">
-                  {section.title}
-                </h3>
-                <ul className="space-y-2 font-mono text-sm leading-5 text-[#3d2818]">
-                  {section.items.map((item) => (
-                    <li key={item} className="flex gap-2">
-                      <span className="mt-2 h-2 w-2 shrink-0 border border-[#4f2d16] bg-[#8f4e22]" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
+              <article key={section.title} className="portfolio-info-card">
+                <div className="portfolio-info-card-panel border-2 border-[#8f4e22] bg-[#ffe8aa]/55 p-4 shadow-[inset_0_0_0_2px_rgba(79,45,22,0.08)]">
+                  <h3 className="mb-3 border-b border-[#8f4e22]/45 pb-2 font-mono text-sm font-black uppercase text-[#5e3218]">
+                    {section.title}
+                  </h3>
+                  <ul className="space-y-2 font-mono text-sm leading-5 text-[#3d2818]">
+                    {section.items.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <span className="mt-2 h-2 w-2 shrink-0 border border-[#4f2d16] bg-[#8f4e22]" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </article>
             ))}
           </div>
@@ -244,7 +243,7 @@ export default function PortfolioModal({
                     href={project.href}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="block border-2 border-[#8f4e22] bg-[#ffe8aa]/60 p-3 font-mono text-[#3d2818] transition hover:bg-[#fff0bd] focus:outline-none focus:ring-2 focus:ring-[#2f1d12]"
+                    className="portfolio-project-card block border-2 border-[#8f4e22] bg-[#ffe8aa]/60 p-3 font-mono text-[#3d2818] transition hover:bg-[#fff0bd] focus:outline-none focus:ring-2 focus:ring-[#2f1d12]"
                   >
                     <span className="block text-sm font-black uppercase text-[#5e3218]">
                       {project.name}

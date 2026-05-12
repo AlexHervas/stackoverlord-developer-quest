@@ -169,6 +169,72 @@ a {
   color: rgba(248, 239, 224, 0.45);
 }
 
+@media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+  .portfolio-info-card {
+    position: relative;
+    height: 332px;
+  }
+
+  .portfolio-info-card-panel {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    transition:
+      width 160ms ease,
+      background-color 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .portfolio-sections-grid {
+    isolation: isolate;
+  }
+
+  .portfolio-info-card:hover .portfolio-info-card-panel {
+    pointer-events: none;
+    z-index: 3;
+    position: absolute;
+    inset-block: 0;
+    width: calc(200% + 1rem);
+    border-color: #5e3218;
+    background: #fff0bd;
+    box-shadow:
+      0 12px 0 rgba(47, 29, 18, 0.35),
+      0 0 0 3px rgba(79, 45, 22, 0.18),
+      inset 0 0 0 2px rgba(79, 45, 22, 0.12);
+  }
+
+  .portfolio-info-card:nth-child(2):hover .portfolio-info-card-panel {
+    right: 0;
+  }
+
+  .portfolio-info-card:hover .portfolio-info-card-panel ul {
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  .portfolio-info-card-panel ul {
+    transition: line-height 160ms ease;
+  }
+
+  .portfolio-project-card {
+    position: relative;
+    transition:
+      background-color 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .portfolio-project-card:hover,
+  .portfolio-project-card:focus-visible {
+    z-index: 1;
+    border-color: #5e3218;
+    box-shadow:
+      0 8px 0 rgba(47, 29, 18, 0.28),
+      0 0 0 2px rgba(79, 45, 22, 0.14);
+  }
+}
+
 @media (hover: none), (pointer: coarse) {
   .mobile-controls {
     display: block;
