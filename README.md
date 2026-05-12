@@ -1,5 +1,7 @@
 # StackOverlord: Developer Quest
 
+![StackOverlord: Developer Quest preview](./public/assets/social-preview.png)
+
 Interactive developer portfolio built as a small pixel-art game.
 
 Instead of a traditional landing page, this project presents portfolio content through explorable scenes, NPC interactions, modal windows and a survival arena with an online leaderboard.
@@ -12,22 +14,26 @@ The app uses React for the DOM shell and portfolio modals, while Phaser manages 
 
 ## Live Demo
 
-Pending deployment.
+https://stackoverlord-developer-quest.vercel.app/
 
 ## Features
 
 - Pixel-art game portfolio experience.
 - Phaser scene flow: menu, intro room, hub and combat arena.
-- Keyboard movement and interactions.
+- Keyboard controls on desktop.
+- Virtual joystick and touch buttons on mobile.
+- Platform-specific control hints for desktop and touch devices.
 - Typewriter dialogue with speech sound.
 - React modals for CV and About content.
-- Per-scene music controls with `[M] MUSIC OFF/ON`.
+- Persistent music preference across scenes.
 - Survival arena with rounds, enemies, score and local game-over flow.
 - Supabase-powered combat leaderboard.
 - `localStorage` fallback when Supabase is not configured or unavailable.
+- Real mobile name input for arena leaderboard submissions.
+- Social preview metadata for shared links.
 - Responsive fullscreen canvas using Phaser scale handling.
 
-## Controls
+## Desktop Controls
 
 | Key | Action |
 | --- | --- |
@@ -38,7 +44,16 @@ Pending deployment.
 | M | Toggle scene music |
 | Esc | Go back or close modal depending on context |
 
-On touch devices, the game shows an on-screen D-pad plus `A`, `Back` and `M` buttons. Arena name entry uses a real text input so mobile keyboards can open.
+## Mobile Controls
+
+| Control | Action |
+| --- | --- |
+| Virtual joystick | Move |
+| A | Start, interact, continue, attack, retry or submit depending on context |
+| Back | Go back or close modal depending on context |
+| M | Toggle music |
+
+Arena name entry uses a real HTML text input on touch devices so mobile keyboards can open correctly.
 
 ## Tech Stack
 
@@ -67,7 +82,9 @@ The project is split between React and Phaser responsibilities:
 ```text
 src/
   components/
+    CombatNameInput.tsx   Mobile HTML input for arena name entry
     GameCanvas.tsx        React wrapper around the Phaser game
+    MobileControls.tsx    Virtual joystick and touch action buttons
     PortfolioModal.tsx    CV and About modal content
   game/
     BootScene.ts          Starts the Phaser scene flow
@@ -82,10 +99,14 @@ src/
       types.ts            Combat-related TypeScript types
     events/
       events.ts           Typed Phaser-to-React event bus
+    input/
+      inputMode.ts        Platform-specific control hint labels
+      virtualInput.ts     Shared touch input state for Phaser scenes
     ui/
       musicControl.ts     Shared music toggle UI
+      musicState.ts       Global music preference state
 public/
-  assets/                 Pixel art, tilemaps, audio and CV PDF
+  assets/                 Pixel art, tilemaps, audio, CV PDF and social images
 supabase/
   combat-ranking.sql      SQL setup for the combat leaderboard
 ```
@@ -96,7 +117,7 @@ supabase/
 2. `PlayScene` introduces the world through a mage dialogue.
 3. `HubScene` lets the player interact with CV, About and Arena NPCs.
 4. `CombatScene` starts the survival arena and leaderboard flow.
-5. The arena returns to the Hub when pressing `Esc`.
+5. The arena returns to the Hub with `Esc` on desktop or `Back` on mobile.
 
 ## Maps and Scene Design
 
@@ -206,11 +227,15 @@ Do not add Supabase `service_role` or secret keys to Vercel for this frontend-on
 - Talk to the mage with `E`.
 - Enter the Hub.
 - Open and close CV/About modals.
-- Toggle music in each scene with `M`.
+- Toggle music with `M` and verify the preference persists across scenes.
 - Enter the Arena.
 - Attack with `Space`.
 - Lose a run, save a score and verify the leaderboard.
 - Return from Arena to Hub with `Esc`.
+- On mobile or touch emulation, verify the virtual joystick, `A`, `Back` and `M`.
+- On mobile, verify the arena name input opens the device keyboard.
+- Test portrait and landscape orientation on a real mobile device.
+- Share the live URL and verify the social preview image appears.
 
 ## Assets and Audio Credits
 
@@ -223,9 +248,9 @@ Visual and audio assets used in this portfolio come from:
 
 ## Known Limitations
 
-- Live deployment is pending.
 - Arena scores are public and not server-verified.
 - Mobile controls may need small visual adjustments across different device aspect ratios.
+- Social link previews can be cached by platforms such as WhatsApp or LinkedIn.
 - The production bundle can be large because Phaser and Supabase are bundled with the app.
 
 ## Author
