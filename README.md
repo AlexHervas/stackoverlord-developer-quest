@@ -4,11 +4,11 @@
 
 Interactive developer portfolio built as a small pixel-art game.
 
-Instead of a traditional landing page, this project presents portfolio content through explorable scenes, NPC interactions, modal windows and a survival arena with an online leaderboard.
+Instead of a traditional landing page, this project presents portfolio content through explorable scenes, NPC interactions, modal windows and a survival arena with a boss fight and online leaderboard.
 
 ## Overview
 
-StackOverlord: Developer Quest is a React + Phaser portfolio experience. The player starts from a menu, enters a small world, talks to a mage, reaches a hub area, opens CV/About content through NPCs and can enter an arena combat scene.
+StackOverlord: Developer Quest is a React + Phaser portfolio experience. The player starts from a menu, enters a small world, talks to a mage, reaches a hub area, opens CV/About content through NPCs and can enter an arena combat scene with selectable attack modes.
 
 The app uses React for the DOM shell and portfolio modals, while Phaser manages the game canvas, scenes, movement, collisions, dialogue, audio, combat and scene transitions.
 
@@ -26,7 +26,8 @@ https://stackoverlord-developer-quest.vercel.app/
 - Typewriter dialogue with speech sound.
 - React modals for CV and About content.
 - Persistent music preference across scenes.
-- Survival arena with rounds, enemies, score and local game-over flow.
+- Survival arena with rounds, enemies, score and selectable attack modes.
+- Multi-phase arena boss fight with charge and explosion phases.
 - Supabase-powered combat leaderboard.
 - `localStorage` fallback when Supabase is not configured or unavailable.
 - Real mobile name input for arena leaderboard submissions.
@@ -40,7 +41,7 @@ https://stackoverlord-developer-quest.vercel.app/
 | Arrow keys | Move |
 | Enter | Start game from the menu |
 | E | Interact, continue, retry or save depending on context |
-| Space | Attack in the arena |
+| Space | Select manual arena mode or attack when manual mode is active |
 | M | Toggle scene music |
 | Esc | Go back or close modal depending on context |
 
@@ -49,11 +50,13 @@ https://stackoverlord-developer-quest.vercel.app/
 | Control | Action |
 | --- | --- |
 | Virtual joystick | Move |
-| A | Start, interact, continue, attack, retry or submit depending on context |
+| A | Start, interact, continue, select manual arena mode, attack, retry or submit depending on context |
 | Back | Go back or close modal depending on context |
 | M | Toggle music |
 
 Arena name entry uses a real HTML text input on touch devices so mobile keyboards can open correctly.
+
+When entering the arena, players choose between auto-attack and manual attack. Retry keeps the selected mode for that run loop; leaving the arena and entering again asks for a new choice.
 
 ## Tech Stack
 
@@ -77,6 +80,22 @@ The project is split between React and Phaser responsibilities:
 - Supabase stores the public arena leaderboard.
 - Static assets are served from `public/assets`.
 
+## AI-Assisted Development Workflow
+
+This project also experiments with an agent-assisted development workflow.
+
+The repository includes an `AGENTS.md` file with project-specific rules for the coding agent: preserve the current architecture, keep Phaser scene keys stable, avoid broad rewrites, validate changes with lint/build, and treat combat refactors as small checkpointed steps.
+
+Local agent skills were used as focused development guides:
+
+- `phaser-gamedev` for Phaser scene, input, physics and game-loop work.
+- `refactor` for surgical, behavior-preserving refactors.
+- Supabase-related skills for database/auth/storage guidance when working around the leaderboard.
+
+This workflow was especially useful while building and polishing the arena phase. The agent helped iterate on the multi-phase boss fight, mobile controls, attack-mode selection, leaderboard flow and later refactors that split `CombatScene` into smaller combat helpers.
+
+The goal was not to let automation rewrite the project, but to test a more structured methodology: clear local instructions, skill-guided development, small commits as checkpoints and manual gameplay testing after risky changes. In that sense, the project served as a practical trial of skill-driven development for a real interactive frontend/game codebase.
+
 ## Folder Structure
 
 ```text
@@ -93,7 +112,15 @@ src/
     HubScene.ts           NPC hub for CV, About and Arena
     CombatScene.ts        Survival arena gameplay
     combat/
+      attackMode.ts       Arena attack mode selector UI
+      bossConfig.ts       Boss tuning and phase values
+      bossLogic.ts        Pure boss range, contact and explosion helpers
+      bossUi.ts           Boss HUD, warning and invulnerability feedback
+      enemySpawning.ts    Enemy and boss spawn point helpers
+      enemyUi.ts          Enemy defeat visual effects
+      gameOverFlow.ts     Arena score, name entry and ranking flow
       hud.ts              Combat HUD builders
+      playerAttackUi.ts   Player slash visual effect
       ranking.ts          Ranking storage layer with Supabase + fallback
       supabaseClient.ts   Supabase client setup
       types.ts            Combat-related TypeScript types
@@ -116,8 +143,17 @@ supabase/
 1. `MenuScene` shows the title screen and starts the game.
 2. `PlayScene` introduces the world through a mage dialogue.
 3. `HubScene` lets the player interact with CV, About and Arena NPCs.
-4. `CombatScene` starts the survival arena and leaderboard flow.
+4. `CombatScene` asks for an arena attack mode, then starts the survival arena and leaderboard flow.
 5. The arena returns to the Hub with `Esc` on desktop or `Back` on mobile.
+
+## Arena Combat
+
+The arena supports two attack modes:
+
+- Auto-attack: the player aims by moving and attacks automatically on cooldown.
+- Manual attack: the player attacks with `Space` on desktop or `A` on mobile, using the same cooldown and hit range.
+
+The boss appears on round 10. It has multiple phases: normal chase, enraged charge and an explosion phase where the player must reach the arena edge before the blast resolves.
 
 ## Maps and Scene Design
 
@@ -229,10 +265,15 @@ Do not add Supabase `service_role` or secret keys to Vercel for this frontend-on
 - Open and close CV/About modals.
 - Toggle music with `M` and verify the preference persists across scenes.
 - Enter the Arena.
-- Attack with `Space`.
+- Choose auto-attack and verify attacks trigger automatically.
+- Lose a run and use retry; verify the selected attack mode is kept.
+- Return to Hub, enter Arena again and verify the attack mode selector appears.
+- Choose manual attack and verify `Space` attacks on desktop.
+- Reach the boss round and verify charge/explosion phases.
 - Lose a run, save a score and verify the leaderboard.
 - Return from Arena to Hub with `Esc`.
 - On mobile or touch emulation, verify the virtual joystick, `A`, `Back` and `M`.
+- On mobile, choose manual attack and verify `A` attacks in the arena.
 - On mobile, verify the arena name input opens the device keyboard.
 - Test portrait and landscape orientation on a real mobile device.
 - Share the live URL and verify the social preview image appears.
