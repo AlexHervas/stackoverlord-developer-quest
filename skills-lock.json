@@ -7,6 +7,12 @@
       "skillPath": ".claude/skills/phaser-gamedev/SKILL.md",
       "computedHash": "7c189dc3905cea3c83b593bdeaba32d134dd3e3da70e7b7663c1e1612def64bf"
     },
+    "refactor": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/refactor/SKILL.md",
+      "computedHash": "87789a786b96f99ba0680e89345a975106e10e7db1071c7cdc2e76d507c449d6"
+    },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
