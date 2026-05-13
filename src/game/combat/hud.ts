@@ -22,7 +22,7 @@ export function createStaticTexts(
   const attackHintText = scene.add
     .text(
       config.arenaWidth / 2,
-      18,
+      config.arenaHeight - 2,
       getAttackHubHint(),
       {
         fontFamily: "monospace",
@@ -32,7 +32,7 @@ export function createStaticTexts(
         padding: { x: 4, y: 2 },
       },
     )
-    .setOrigin(0.5, 0)
+    .setOrigin(0.5, 1)
     .setScrollFactor(0)
     .setDepth(10);
 
