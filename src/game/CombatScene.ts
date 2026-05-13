@@ -5,18 +5,8 @@ import {
   createStaticTexts,
 } from "./combat/hud";
 import {
-  formatRankingRows,
-  getBestScore,
-  getPlayerId,
-  loadRanking,
-  saveRankingEntry,
-} from "./combat/ranking";
-import { eventBus } from "./events/events";
-import {
   getAttackHubHint,
   getManualAttackHubHint,
-  getNameSubmitHint,
-  getRetryHubHint,
 } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
@@ -25,6 +15,10 @@ import {
   type AttackMode,
   type CombatSceneData,
 } from "./combat/attackMode";
+import {
+  CombatGameOverFlow,
+  type CombatGameOverStats,
+} from "./combat/gameOverFlow";
 import { BOSS_CONFIG, type BossActionState } from "./combat/bossConfig";
 import {
   getBossExplosionDangerBounds,
@@ -46,7 +40,7 @@ import {
   updateBossInvulnerabilityAuraPosition,
   type BossHud,
 } from "./combat/bossUi";
-import type { RankingEntry, SpawnPoint } from "./combat/types";
+import type { SpawnPoint } from "./combat/types";
 
 const ARENA_WIDTH = 320;
 const ARENA_HEIGHT = 160;
@@ -167,15 +161,11 @@ export default class CombatScene extends Phaser.Scene {
   private lastDamageAt = 0;
   private isChangingRound = false;
   private isGameOver = false;
-  private isEnteringName = false;
-  private isCheckingScore = false;
-  private isSavingRecord = false;
   private kills = 0;
   private activeStartedAt = 0;
   private activeElapsedMs = 0;
   private finalScore = 0;
   private finalSeconds = 0;
-  private nameDraft = "";
   private facing = new Phaser.Math.Vector2(1, 0);
 
   private roundText!: Phaser.GameObjects.Text;
@@ -183,16 +173,9 @@ export default class CombatScene extends Phaser.Scene {
   private enemiesText!: Phaser.GameObjects.Text;
   private scoreText!: Phaser.GameObjects.Text;
   private messageText!: Phaser.GameObjects.Text;
-  private rankingText!: Phaser.GameObjects.Text;
-  private statsText!: Phaser.GameObjects.Text;
-  private nameInputText!: Phaser.GameObjects.Text;
-  private controlsText!: Phaser.GameObjects.Text;
   private attackHintText!: Phaser.GameObjects.Text;
   private musicControl?: ReturnType<typeof createMusicControl>;
-  private removeNameInputReadyListener?: () => void;
-  private removeNameInputChangeListener?: () => void;
-  private removeNameInputSubmitListener?: () => void;
-  private isHtmlNameInputReady = false;
+  private gameOverFlow?: CombatGameOverFlow;
 
   constructor() {
     super("CombatScene");
@@ -314,15 +297,17 @@ export default class CombatScene extends Phaser.Scene {
     const savePressed = this.isMobileSaveJustPressed();
     const backPressed = this.isBackJustPressed();
 
-    if (this.isCheckingScore || this.isSavingRecord) return true;
+    if (this.gameOverFlow?.checkingScore || this.gameOverFlow?.savingRecord) {
+      return true;
+    }
 
-    if (!this.isEnteringName && retryPressed) {
+    if (!this.gameOverFlow?.enteringName && retryPressed) {
       this.scene.restart({
         attackMode: this.attackMode,
       } satisfies CombatSceneData);
     }
-    if (this.isEnteringName && savePressed) {
-      void this.saveRecord();
+    if (this.gameOverFlow?.enteringName && savePressed) {
+      void this.gameOverFlow.saveRecord(this.getGameOverStats());
     }
     if (backPressed) this.returnToHub();
     return true;
@@ -357,16 +342,12 @@ export default class CombatScene extends Phaser.Scene {
     this.lastDamageAt = 0;
     this.isChangingRound = false;
     this.isGameOver = false;
-    this.isEnteringName = false;
-    this.isCheckingScore = false;
-    this.isSavingRecord = false;
     this.kills = 0;
     this.activeStartedAt = Date.now();
     this.activeElapsedMs = 0;
     this.finalScore = 0;
     this.finalSeconds = 0;
-    this.nameDraft = "";
-    this.isHtmlNameInputReady = false;
+    this.gameOverFlow?.reset();
     this.attackMode = this.selectedAttackMode ?? "auto";
     this.isChoosingAttackMode = false;
     this.attackModeOverlay = undefined;
@@ -461,7 +442,8 @@ export default class CombatScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.musicControl?.destroy();
       this.musicControl = undefined;
-      this.closeNameInput();
+      this.gameOverFlow?.destroy();
+      this.gameOverFlow = undefined;
       this.input.keyboard?.off("keydown", this.handleNameInput, this);
       window.removeEventListener("blur", this.handleWindowBlur);
       document.removeEventListener(
@@ -483,7 +465,7 @@ export default class CombatScene extends Phaser.Scene {
       origin: [1, 0],
       scrollFactor: 0,
       depth: 20,
-      canToggle: () => !this.isEnteringName,
+      canToggle: () => !this.gameOverFlow?.enteringName,
       style: {
         fontFamily: "monospace",
         fontSize: "7px",
@@ -505,10 +487,11 @@ export default class CombatScene extends Phaser.Scene {
   private setupOverlayTexts() {
     const overlayTexts = createOverlayTexts(this, HUD_CONFIG);
     this.messageText = overlayTexts.messageText;
-    this.rankingText = overlayTexts.rankingText;
-    this.statsText = overlayTexts.statsText;
-    this.nameInputText = overlayTexts.nameInputText;
-    this.controlsText = overlayTexts.controlsText;
+    this.gameOverFlow = new CombatGameOverFlow(
+      this,
+      overlayTexts,
+      MAX_NAME_LENGTH,
+    );
   }
 
   private showAttackModeSelection() {
@@ -1208,26 +1191,7 @@ export default class CombatScene extends Phaser.Scene {
       enemy.disableBody(true, true);
     });
 
-    this.messageText.setText("CHECKING SCORE...").setVisible(true);
-    this.isCheckingScore = true;
-    const playerId = getPlayerId();
-    const bestScore = await getBestScore(playerId);
-    this.isCheckingScore = false;
-    if (!this.scene.isActive()) return;
-
-    if (!bestScore.hasBestScore || this.finalScore > bestScore.score) {
-      this.isEnteringName = true;
-      this.messageText
-        .setText(`NEW RECORD: ${this.finalScore}`)
-        .setVisible(true);
-      this.showNameEntryPrompt();
-      this.updateNameInput();
-    } else {
-      this.messageText
-        .setText(`YOU FELL. SCORE: ${this.finalScore}`)
-        .setVisible(true);
-      void this.showRanking(getRetryHubHint());
-    }
+    await this.gameOverFlow?.checkScoreAndShowPrompt(this.getGameOverStats());
   }
 
   private updateHud() {
@@ -1306,6 +1270,15 @@ export default class CombatScene extends Phaser.Scene {
     );
   }
 
+  private getGameOverStats(): CombatGameOverStats {
+    return {
+      score: this.finalScore,
+      round: this.round,
+      kills: this.kills,
+      seconds: this.finalSeconds,
+    };
+  }
+
   private getSurvivedSeconds() {
     if (this.isGameOver) return this.finalSeconds;
     return Math.floor(this.getActiveElapsedMs() / 1000);
@@ -1348,136 +1321,6 @@ export default class CombatScene extends Phaser.Scene {
   };
 
   private handleNameInput(event: KeyboardEvent) {
-    if (!this.isEnteringName) return;
-    if (this.isSavingRecord) return;
-
-    if (event.key === "Enter") {
-      void this.saveRecord();
-      return;
-    }
-
-    if (event.key === "Backspace") {
-      this.nameDraft = this.nameDraft.slice(0, -1);
-      this.updateNameInput();
-      return;
-    }
-
-    if (event.key.length !== 1 || this.nameDraft.length >= MAX_NAME_LENGTH) {
-      return;
-    }
-
-    if (/^[a-zA-Z0-9 _-]$/.test(event.key)) {
-      this.nameDraft += event.key.toUpperCase();
-      this.updateNameInput();
-    }
-  }
-
-  private updateNameInput() {
-    const visibleName = this.nameDraft.padEnd(MAX_NAME_LENGTH, "_");
-    this.nameInputText
-      .setText(`NAME: ${visibleName}`)
-      .setVisible(!this.isHtmlNameInputReady);
-  }
-
-  private showNameEntryPrompt() {
-    this.rankingText.setVisible(false);
-    this.statsText.setVisible(false);
-    this.openNameInput();
-    this.controlsText.setText(getNameSubmitHint()).setVisible(true);
-  }
-
-  private openNameInput() {
-    this.closeNameInput();
-    eventBus.emit("combat:name-input:open", {
-      value: this.nameDraft,
-      maxLength: MAX_NAME_LENGTH,
-    });
-    this.removeNameInputReadyListener = eventBus.on(
-      "combat:name-input:ready",
-      () => {
-        if (!this.isEnteringName) return;
-        this.isHtmlNameInputReady = true;
-        this.nameInputText.setVisible(false);
-      },
-    );
-    this.removeNameInputChangeListener = eventBus.on(
-      "combat:name-input:change",
-      ({ value }) => {
-        if (!this.isEnteringName || this.isSavingRecord) return;
-        this.nameDraft = value.slice(0, MAX_NAME_LENGTH);
-        this.updateNameInput();
-      },
-    );
-    this.removeNameInputSubmitListener = eventBus.on(
-      "combat:name-input:submit",
-      () => {
-        if (!this.isEnteringName || this.isSavingRecord) return;
-        void this.saveRecord();
-      },
-    );
-  }
-
-  private closeNameInput() {
-    this.removeNameInputReadyListener?.();
-    this.removeNameInputChangeListener?.();
-    this.removeNameInputSubmitListener?.();
-    this.removeNameInputReadyListener = undefined;
-    this.removeNameInputChangeListener = undefined;
-    this.removeNameInputSubmitListener = undefined;
-    this.isHtmlNameInputReady = false;
-    eventBus.emit("combat:name-input:close", undefined);
-  }
-
-  private async saveRecord() {
-    this.isSavingRecord = true;
-    const entry: RankingEntry = {
-      playerId: getPlayerId(),
-      name: this.nameDraft.trim() || "ANON",
-      score: this.finalScore,
-      round: this.round,
-      kills: this.kills,
-      seconds: this.finalSeconds,
-      date: new Date().toISOString(),
-    };
-
-    this.controlsText.setText("SAVING...");
-    await saveRankingEntry(entry);
-    if (!this.scene.isActive()) return;
-
-    this.isSavingRecord = false;
-    this.isEnteringName = false;
-    this.closeNameInput();
-    this.nameInputText.setVisible(false);
-    this.messageText.setText(`SAVED: ${entry.name} ${entry.score}`);
-    await this.showRanking(getRetryHubHint());
-  }
-
-  private async showRanking(footer: string) {
-    const ranking = await loadRanking();
-    if (!this.scene.isActive()) return;
-    const rows = this.formatRankingColumns(formatRankingRows(ranking));
-
-    this.messageText.setY(48);
-    this.rankingText.setText(["TOP 10 ARENA", ...rows]).setVisible(true);
-    this.statsText
-      .setText(
-        `KILLS: ${this.kills}  ROUND: ${this.round}  TIME: ${this.finalSeconds}S`,
-      )
-      .setVisible(true);
-    this.controlsText.setText(footer).setVisible(true);
-  }
-
-  private formatRankingColumns(rows: string[]) {
-    const normalizedRows = rows.slice(0, 10);
-    const leftRows = normalizedRows.slice(0, 5);
-    const rightRows = normalizedRows.slice(5, 10);
-    const leftWidth = Math.max(...leftRows.map((row) => row.length), 16);
-
-    return leftRows.map((leftRow, index) => {
-      const rightRow = rightRows[index];
-      return rightRow
-        ? `${leftRow.padEnd(leftWidth, " ")}  ${rightRow}`
-        : leftRow;
-    });
+    this.gameOverFlow?.handleNameInput(event, this.getGameOverStats());
   }
 }
