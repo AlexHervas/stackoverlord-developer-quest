@@ -19,6 +19,13 @@ import {
   CombatGameOverFlow,
   type CombatGameOverStats,
 } from "./combat/gameOverFlow";
+import { getEnemyTextureKey, getSpawnPoint } from "./combat/enemySpawning";
+import {
+  ENEMY_DEFEAT_DEPTH,
+  ENEMY_DEFEAT_DURATION,
+  ENEMY_DEFEAT_SCALE,
+  playEnemyDefeatEffect,
+} from "./combat/enemyUi";
 import {
   createSlashEffect,
   SLASH_FADE_DURATION,
@@ -45,7 +52,6 @@ import {
   updateBossInvulnerabilityAuraPosition,
   type BossHud,
 } from "./combat/bossUi";
-import type { SpawnPoint } from "./combat/types";
 
 const ARENA_WIDTH = 320;
 const ARENA_HEIGHT = 160;
@@ -66,11 +72,7 @@ const INITIAL_HEALTH = 3;
 const PLAYER_START_Y_OFFSET = 18;
 const PLAYER_BODY_WIDTH = 14;
 const PLAYER_BODY_HEIGHT = 14;
-const ENEMY_SPAWN_MARGIN = 16;
-const ENEMY_SPAWN_JITTER = 6;
 const ENEMY_SPEED_PER_ROUND = 1;
-const ENEMY_HIT_TINT = 0xffb3b3;
-const ENEMY_TEXTURE_KEYS = ["phantom", "spyder"] as const;
 const ATTACK_CENTER_OFFSET = 14;
 const ATTACK_HIT_PADDING = 8;
 const PLAYER_HIT_SHAKE_DURATION = 90;
@@ -79,10 +81,6 @@ const PLAYER_HIT_TINT = 0xff6b6b;
 const PLAYER_HIT_BLINK_ALPHA = 0.35;
 const PLAYER_HIT_BLINK_DURATION = 80;
 const PLAYER_HIT_BLINK_REPEATS = 5;
-const ENEMY_DEFEAT_DEPTH = 4;
-const ENEMY_DEFEAT_KNOCKBACK = 14;
-const ENEMY_DEFEAT_SCALE = 1.2;
-const ENEMY_DEFEAT_DURATION = 130;
 const ROUND_START_DELAY = 900;
 const KILL_SCORE = 100;
 const ROUND_SCORE = 250;
@@ -556,47 +554,16 @@ export default class CombatScene extends Phaser.Scene {
 
   private spawnEnemies(count: number) {
     for (let i = 0; i < count; i += 1) {
-      const point = this.getSpawnPoint(i);
+      const point = getSpawnPoint(i, ARENA_BOUNDS);
       const enemy = this.enemies.create(
         point.x,
         point.y,
-        this.getEnemyTextureKey(i),
+        getEnemyTextureKey(i),
       ) as Phaser.Physics.Arcade.Sprite;
 
       enemy.setCollideWorldBounds(true);
       enemy.setScale(1);
     }
-  }
-
-  private getSpawnPoint(index: number): SpawnPoint {
-    const positions = [
-      {
-        x: ARENA_BOUNDS.x + ENEMY_SPAWN_MARGIN,
-        y: ARENA_BOUNDS.y + ENEMY_SPAWN_MARGIN,
-      },
-      {
-        x: ARENA_BOUNDS.x + ARENA_BOUNDS.width - ENEMY_SPAWN_MARGIN,
-        y: ARENA_BOUNDS.y + ENEMY_SPAWN_MARGIN,
-      },
-      {
-        x: ARENA_BOUNDS.x + ENEMY_SPAWN_MARGIN,
-        y: ARENA_BOUNDS.y + ARENA_BOUNDS.height - ENEMY_SPAWN_MARGIN,
-      },
-      {
-        x: ARENA_BOUNDS.x + ARENA_BOUNDS.width - ENEMY_SPAWN_MARGIN,
-        y: ARENA_BOUNDS.y + ARENA_BOUNDS.height - ENEMY_SPAWN_MARGIN,
-      },
-    ];
-
-    const base = positions[index % positions.length];
-    return {
-      x: base.x + Phaser.Math.Between(-ENEMY_SPAWN_JITTER, ENEMY_SPAWN_JITTER),
-      y: base.y + Phaser.Math.Between(-ENEMY_SPAWN_JITTER, ENEMY_SPAWN_JITTER),
-    };
-  }
-
-  private getEnemyTextureKey(index: number) {
-    return ENEMY_TEXTURE_KEYS[index % ENEMY_TEXTURE_KEYS.length];
   }
 
   private updateEnemies() {
@@ -612,7 +579,7 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private spawnBoss() {
-    const point = this.getSpawnPoint(1);
+    const point = getSpawnPoint(1, ARENA_BOUNDS);
     this.boss = this.physics.add
       .sprite(point.x, point.y, BOSS_CONFIG.textureKey, BOSS_CONFIG.idleFrame)
       .setScale(BOSS_CONFIG.scale)
@@ -1066,26 +1033,7 @@ export default class CombatScene extends Phaser.Scene {
 
     this.kills += 1;
     enemy.disableBody(false, false);
-    enemy.setTint(ENEMY_HIT_TINT);
-    enemy.setDepth(ENEMY_DEFEAT_DEPTH);
-
-    const knockback = new Phaser.Math.Vector2(
-      enemy.x - this.player.x,
-      enemy.y - this.player.y,
-    );
-
-    if (knockback.lengthSq() === 0) knockback.copy(this.facing);
-    knockback.normalize().scale(ENEMY_DEFEAT_KNOCKBACK);
-
-    this.tweens.add({
-      targets: enemy,
-      x: enemy.x + knockback.x,
-      y: enemy.y + knockback.y,
-      alpha: 0,
-      scale: ENEMY_DEFEAT_SCALE,
-      duration: ENEMY_DEFEAT_DURATION,
-      onComplete: () => enemy.destroy(),
-    });
+    playEnemyDefeatEffect(this, enemy, this.player, this.facing);
   }
 
   private startPlayerInvulnerabilityFeedback() {
