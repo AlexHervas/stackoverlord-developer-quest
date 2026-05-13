@@ -19,6 +19,11 @@ import {
   CombatGameOverFlow,
   type CombatGameOverStats,
 } from "./combat/gameOverFlow";
+import {
+  createSlashEffect,
+  SLASH_FADE_DURATION,
+  SLASH_FADE_SCALE,
+} from "./combat/playerAttackUi";
 import { BOSS_CONFIG, type BossActionState } from "./combat/bossConfig";
 import {
   getBossExplosionDangerBounds,
@@ -68,22 +73,6 @@ const ENEMY_HIT_TINT = 0xffb3b3;
 const ENEMY_TEXTURE_KEYS = ["phantom", "spyder"] as const;
 const ATTACK_CENTER_OFFSET = 14;
 const ATTACK_HIT_PADDING = 8;
-const SLASH_DEPTH = 5;
-const SLASH_FADE_SCALE = 1.08;
-const SLASH_FADE_DURATION = 150;
-const SLASH_OFFSET = 6;
-const SLASH_START_ANGLE = -Math.PI / 3.2;
-const SLASH_END_ANGLE = Math.PI / 3.2;
-const SLASH_RADIUS = 16;
-const SLASH_OUTER_RADIUS = 19;
-const SLASH_STEPS = 6;
-const SLASH_STEP_DELAY = 18;
-const SLASH_SHADOW_WIDTH = 4;
-const SLASH_SHADOW_COLOR = 0xffe7a2;
-const SLASH_SHADOW_ALPHA = 0.34;
-const SLASH_CORE_WIDTH = 2;
-const SLASH_CORE_COLOR = 0xffffff;
-const SLASH_CORE_ALPHA = 0.82;
 const PLAYER_HIT_SHAKE_DURATION = 90;
 const PLAYER_HIT_SHAKE_INTENSITY = 0.008;
 const PLAYER_HIT_TINT = 0xff6b6b;
@@ -760,7 +749,12 @@ export default class CombatScene extends Phaser.Scene {
     this.lastAttackAt = this.time.now;
     this.playCombatSound(COMBAT_AUDIO.attack);
     const attackCenter = this.getAttackCenter();
-    const slash = this.createSlashEffect(this.player.x, this.player.y);
+    const slash = createSlashEffect(
+      this,
+      this.player.x,
+      this.player.y,
+      this.facing,
+    );
 
     this.tweens.add({
       targets: slash,
@@ -1065,47 +1059,6 @@ export default class CombatScene extends Phaser.Scene {
       x: this.player.x + this.facing.x * ATTACK_CENTER_OFFSET,
       y: this.player.y + this.facing.y * ATTACK_CENTER_OFFSET,
     };
-  }
-
-  private createSlashEffect(x: number, y: number) {
-    const slash = this.add.container(x, y).setDepth(SLASH_DEPTH);
-    const arc = this.add.graphics();
-    const angle = Math.atan2(this.facing.y, this.facing.x);
-
-    arc.x = this.facing.x * SLASH_OFFSET;
-    arc.y = this.facing.y * SLASH_OFFSET;
-    arc.rotation = angle;
-    slash.add(arc);
-
-    for (let step = 1; step <= SLASH_STEPS; step += 1) {
-      this.time.delayedCall((step - 1) * SLASH_STEP_DELAY, () => {
-        if (!arc.active) return;
-
-        const progress = step / SLASH_STEPS;
-        const currentEnd = Phaser.Math.Linear(
-          SLASH_START_ANGLE,
-          SLASH_END_ANGLE,
-          progress,
-        );
-        arc.clear();
-
-        arc.lineStyle(
-          SLASH_SHADOW_WIDTH,
-          SLASH_SHADOW_COLOR,
-          SLASH_SHADOW_ALPHA,
-        );
-        arc.beginPath();
-        arc.arc(0, 0, SLASH_RADIUS, SLASH_START_ANGLE, currentEnd);
-        arc.strokePath();
-
-        arc.lineStyle(SLASH_CORE_WIDTH, SLASH_CORE_COLOR, SLASH_CORE_ALPHA);
-        arc.beginPath();
-        arc.arc(0, 0, SLASH_OUTER_RADIUS, SLASH_START_ANGLE, currentEnd);
-        arc.strokePath();
-      });
-    }
-
-    return slash;
   }
 
   private defeatEnemy(enemy: Phaser.Physics.Arcade.Sprite) {
