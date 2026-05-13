@@ -32,6 +32,12 @@ export function getAttackHubHint() {
     : "MOVE TO AIM | ESC: HUB";
 }
 
+export function getManualAttackHubHint() {
+  return isTouchMode()
+    ? "JOYSTICK AIM | A: ATTACK | BACK: HUB"
+    : "SPACE: ATTACK | ESC: HUB";
+}
+
 export function getRetryHubHint() {
   return isTouchMode() ? "A: RETRY | BACK: HUB" : "E: RETRY | ESC: HUB";
 }

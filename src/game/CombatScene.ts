@@ -12,9 +12,19 @@ import {
   saveRankingEntry,
 } from "./combat/ranking";
 import { eventBus } from "./events/events";
-import { getNameSubmitHint, getRetryHubHint } from "./input/inputMode";
+import {
+  getAttackHubHint,
+  getManualAttackHubHint,
+  getNameSubmitHint,
+  getRetryHubHint,
+} from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
+import {
+  createAttackModeSelection,
+  type AttackMode,
+  type CombatSceneData,
+} from "./combat/attackMode";
 import { BOSS_CONFIG, type BossActionState } from "./combat/bossConfig";
 import {
   getBossExplosionDangerBounds,
@@ -146,6 +156,11 @@ export default class CombatScene extends Phaser.Scene {
   private escKey!: Phaser.Input.Keyboard.Key;
   private retryKey!: Phaser.Input.Keyboard.Key;
 
+  private attackMode: AttackMode = "auto";
+  private selectedAttackMode?: AttackMode;
+  private shouldReuseAttackModeOnRetry = false;
+  private isChoosingAttackMode = false;
+  private attackModeOverlay?: Phaser.GameObjects.Container;
   private round = INITIAL_ROUND;
   private health = INITIAL_HEALTH;
   private lastAttackAt = 0;
@@ -183,6 +198,15 @@ export default class CombatScene extends Phaser.Scene {
     super("CombatScene");
   }
 
+  init(data: CombatSceneData = {}) {
+    this.selectedAttackMode = data.forceAttackModeSelection
+      ? undefined
+      : data.attackMode;
+    this.shouldReuseAttackModeOnRetry = Boolean(
+      !data.forceAttackModeSelection && data.attackMode,
+    );
+  }
+
   preload() {
     this.load.image("combatTiles", "assets/tilemap.png");
     this.load.tilemapTiledJSON("combatArena", "assets/combatArena.json");
@@ -213,20 +237,27 @@ export default class CombatScene extends Phaser.Scene {
     this.createMusicControl();
     this.setupLifecycleListeners();
 
-    this.startRound();
+    if (this.shouldReuseAttackModeOnRetry && this.selectedAttackMode) {
+      this.startWithAttackMode(this.selectedAttackMode);
+    } else {
+      this.showAttackModeSelection();
+    }
     this.cameras.main.fadeIn(250, 0, 0, 0);
   }
 
   update() {
     if (!this.player || !this.cursors) return;
 
+    if (this.isChoosingAttackMode) {
+      this.handleAttackModeSelectionInput();
+      return;
+    }
     if (this.handleGameOverInput()) return;
 
     this.updatePlayerMovement(this.cursors);
     this.updateEnemies();
 
-    this.consumeIgnoredPrimaryAction();
-    this.attack();
+    this.handlePlayerAttackInput();
 
     this.updateHud();
     this.checkRoundComplete();
@@ -286,7 +317,9 @@ export default class CombatScene extends Phaser.Scene {
     if (this.isCheckingScore || this.isSavingRecord) return true;
 
     if (!this.isEnteringName && retryPressed) {
-      this.scene.restart();
+      this.scene.restart({
+        attackMode: this.attackMode,
+      } satisfies CombatSceneData);
     }
     if (this.isEnteringName && savePressed) {
       void this.saveRecord();
@@ -334,6 +367,9 @@ export default class CombatScene extends Phaser.Scene {
     this.finalSeconds = 0;
     this.nameDraft = "";
     this.isHtmlNameInputReady = false;
+    this.attackMode = this.selectedAttackMode ?? "auto";
+    this.isChoosingAttackMode = false;
+    this.attackModeOverlay = undefined;
     this.boss = undefined;
     this.bossHealth = 0;
     this.bossStunnedUntil = 0;
@@ -473,6 +509,62 @@ export default class CombatScene extends Phaser.Scene {
     this.statsText = overlayTexts.statsText;
     this.nameInputText = overlayTexts.nameInputText;
     this.controlsText = overlayTexts.controlsText;
+  }
+
+  private showAttackModeSelection() {
+    this.isChoosingAttackMode = true;
+    this.player.setVelocity(0, 0);
+    this.setCombatHudVisible(false);
+    this.attackHintText.setVisible(false);
+    this.attackModeOverlay = createAttackModeSelection(
+      this,
+      {
+        arenaWidth: ARENA_WIDTH,
+        arenaHeight: ARENA_HEIGHT,
+        titleFont: TITLE_FONT,
+      },
+      {
+        onAuto: () => this.selectAttackMode("auto"),
+        onManual: () => this.selectAttackMode("manual"),
+      },
+    );
+  }
+
+  private handleAttackModeSelectionInput() {
+    if (Phaser.Input.Keyboard.JustDown(this.retryKey)) {
+      this.selectAttackMode("auto");
+      return;
+    }
+
+    if (
+      Phaser.Input.Keyboard.JustDown(this.cursors!.space) ||
+      virtualInput.consumeAction("primary")
+    ) {
+      this.selectAttackMode("manual");
+    }
+  }
+
+  private selectAttackMode(mode: AttackMode) {
+    this.startWithAttackMode(mode);
+  }
+
+  private startWithAttackMode(mode: AttackMode) {
+    this.attackMode = mode;
+    this.selectedAttackMode = undefined;
+    this.isChoosingAttackMode = false;
+    this.attackModeOverlay?.destroy(true);
+    this.attackModeOverlay = undefined;
+    virtualInput.clearActions();
+    this.activeStartedAt = Date.now();
+    this.setCombatHudVisible(true);
+    this.attackHintText.setText(this.getAttackHint()).setVisible(true);
+    this.startRound();
+  }
+
+  private getAttackHint() {
+    return this.attackMode === "manual"
+      ? getManualAttackHubHint()
+      : getAttackHubHint();
   }
 
   private startRound() {
@@ -662,7 +754,24 @@ export default class CombatScene extends Phaser.Scene {
     this.bossActionUntil = this.time.now + BOSS_CONFIG.chargeRecoveryDuration;
   }
 
-  private attack() {
+  private handlePlayerAttackInput() {
+    if (this.attackMode === "manual") {
+      if (this.isManualAttackJustPressed()) this.tryPlayerAttack();
+      return;
+    }
+
+    this.consumeIgnoredPrimaryAction();
+    this.tryPlayerAttack();
+  }
+
+  private isManualAttackJustPressed() {
+    return (
+      Phaser.Input.Keyboard.JustDown(this.cursors!.space) ||
+      virtualInput.consumeAction("primary")
+    );
+  }
+
+  private tryPlayerAttack() {
     if (this.time.now - this.lastAttackAt < ATTACK_COOLDOWN) return;
 
     this.lastAttackAt = this.time.now;
@@ -1177,6 +1286,8 @@ export default class CombatScene extends Phaser.Scene {
   private returnToHub() {
     this.player.setVelocity(0, 0);
     this.musicControl?.stop();
+    this.selectedAttackMode = undefined;
+    this.shouldReuseAttackModeOnRetry = false;
     virtualInput.clearActions();
     this.cameras.main.fadeOut(250, 0, 0, 0);
     this.cameras.main.once(
@@ -1207,7 +1318,8 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private pauseCombatTimer() {
-    if (this.isGameOver || this.scene.isPaused()) return;
+    if (this.isChoosingAttackMode || this.isGameOver || this.scene.isPaused())
+      return;
 
     this.activeElapsedMs += Date.now() - this.activeStartedAt;
     this.player?.setVelocity(0, 0);
@@ -1216,7 +1328,8 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private resumeCombatTimer() {
-    if (this.isGameOver || !this.scene.isPaused()) return;
+    if (this.isChoosingAttackMode || this.isGameOver || !this.scene.isPaused())
+      return;
 
     this.activeStartedAt = Date.now();
     this.scene.resume();

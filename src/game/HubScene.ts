@@ -221,7 +221,7 @@ export default class HubScene extends Phaser.Scene {
       } else if (action === "combat") {
         this.musicControl?.stop();
         virtualInput.clearActions();
-        this.scene.start("CombatScene");
+        this.scene.start("CombatScene", { forceAttackModeSelection: true });
       }
     }
   }
