@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { virtualInput } from "./input/virtualInput";
 
 const SCENE_WIDTH = 320;
 const SCENE_HEIGHT = 160;
@@ -6,6 +7,9 @@ const PANEL_WIDTH = 132;
 const PANEL_HEIGHT = 64;
 
 export default class CombatPauseScene extends Phaser.Scene {
+  private pauseKey?: Phaser.Input.Keyboard.Key;
+  private offVirtualPause?: () => void;
+
   constructor() {
     super("CombatPauseScene");
   }
@@ -45,9 +49,27 @@ export default class CombatPauseScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.resumeCombat());
+
+    this.pauseKey = this.input.keyboard?.addKey(
+      Phaser.Input.Keyboard.KeyCodes.P,
+    );
+    this.offVirtualPause = virtualInput.onAction("pause", () =>
+      this.resumeCombat(),
+    );
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.offVirtualPause?.();
+      this.offVirtualPause = undefined;
+    });
+  }
+
+  update() {
+    if (this.pauseKey && Phaser.Input.Keyboard.JustDown(this.pauseKey)) {
+      this.resumeCombat();
+    }
   }
 
   private resumeCombat() {
+    virtualInput.clearActions();
     this.scene.get("CombatScene").events.emit("combat:resume-from-pause");
     this.scene.stop();
   }

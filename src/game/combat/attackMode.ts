@@ -19,7 +19,7 @@ type AttackModeSelectionCallbacks = {
 };
 
 const PANEL_WIDTH = 220;
-const PANEL_HEIGHT = 112;
+const PANEL_HEIGHT = 128;
 const BUTTON_WIDTH = 84;
 const BUTTON_HEIGHT = 28;
 
@@ -55,7 +55,7 @@ export function createAttackModeSelection(
     .text(
       config.arenaWidth / 2,
       panelY + 32,
-      "E/BACK: auto  SPACE/A: manual\nExit and enter again to change the mode.",
+      "E/BACK: auto  SPACE/A: manual\nP: pause\nExit and enter again to change the mode.",
       {
         fontFamily: "monospace",
         fontSize: "8px",
@@ -67,7 +67,7 @@ export function createAttackModeSelection(
   const autoButton = createAttackModeButton(
     scene,
     panelX + 20,
-    panelY + 62,
+    panelY + 82,
     "AUTO",
     "AIM BY MOVING",
     callbacks.onAuto,
@@ -75,7 +75,7 @@ export function createAttackModeSelection(
   const manualButton = createAttackModeButton(
     scene,
     panelX + PANEL_WIDTH - BUTTON_WIDTH - 20,
-    panelY + 62,
+    panelY + 82,
     "SPACE / A",
     "PRESS TO HIT",
     callbacks.onManual,

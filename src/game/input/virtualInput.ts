@@ -1,5 +1,5 @@
 export type VirtualDirection = "up" | "down" | "left" | "right";
-export type VirtualAction = "primary" | "back" | "music";
+export type VirtualAction = "primary" | "back" | "music" | "pause";
 
 type ActionHandler = () => void;
 
@@ -18,12 +18,14 @@ const actionPresses: Record<VirtualAction, number> = {
   primary: 0,
   back: 0,
   music: 0,
+  pause: 0,
 };
 
 const consumedPresses: Record<VirtualAction, number> = {
   primary: 0,
   back: 0,
   music: 0,
+  pause: 0,
 };
 
 const actionHandlers = new Map<VirtualAction, Set<ActionHandler>>();
@@ -78,5 +80,6 @@ export const virtualInput = {
     consumedPresses.primary = actionPresses.primary;
     consumedPresses.back = actionPresses.back;
     consumedPresses.music = actionPresses.music;
+    consumedPresses.pause = actionPresses.pause;
   },
 };

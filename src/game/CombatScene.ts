@@ -141,6 +141,7 @@ export default class CombatScene extends Phaser.Scene {
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private escKey!: Phaser.Input.Keyboard.Key;
   private retryKey!: Phaser.Input.Keyboard.Key;
+  private pauseKey!: Phaser.Input.Keyboard.Key;
 
   private attackMode: AttackMode = "auto";
   private selectedAttackMode?: AttackMode;
@@ -168,7 +169,6 @@ export default class CombatScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private messageText!: Phaser.GameObjects.Text;
   private attackHintText!: Phaser.GameObjects.Text;
-  private pauseButton?: Phaser.GameObjects.Text;
   private musicControl?: ReturnType<typeof createMusicControl>;
   private gameOverFlow?: CombatGameOverFlow;
   private isPauseMenuOpen = false;
@@ -214,7 +214,6 @@ export default class CombatScene extends Phaser.Scene {
     this.setupHudTexts();
     this.setupOverlayTexts();
     this.createMusicControl();
-    this.createPauseButton();
     this.setupLifecycleListeners();
 
     if (this.shouldReuseAttackModeOnRetry && this.selectedAttackMode) {
@@ -233,6 +232,7 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     if (this.handleGameOverInput()) return;
+    this.handlePauseInput();
 
     this.updatePlayerMovement(this.cursors);
     this.updateEnemies();
@@ -437,6 +437,9 @@ export default class CombatScene extends Phaser.Scene {
     this.retryKey = this.input.keyboard!.addKey(
       Phaser.Input.Keyboard.KeyCodes.E,
     );
+    this.pauseKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.P,
+    );
   }
 
   private setupLifecycleListeners() {
@@ -446,8 +449,6 @@ export default class CombatScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.musicControl?.destroy();
       this.musicControl = undefined;
-      this.pauseButton?.destroy();
-      this.pauseButton = undefined;
       this.gameOverFlow?.destroy();
       this.gameOverFlow = undefined;
       this.events.off("combat:resume-from-pause", this.resumeFromPauseMenu, this);
@@ -482,23 +483,6 @@ export default class CombatScene extends Phaser.Scene {
         padding: { x: 4, y: 2 },
       },
     });
-  }
-
-  private createPauseButton() {
-    this.pauseButton = this.add
-      .text(ARENA_WIDTH - 62, 2, "PAUSE", {
-        fontFamily: "monospace",
-        fontSize: "7px",
-        color: "#ffe7a2",
-        backgroundColor: "rgba(0,0,0,0.72)",
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0)
-      .setDepth(20)
-      .setInteractive({ useHandCursor: true });
-
-    this.pauseButton.on("pointerdown", () => this.openPauseMenu());
   }
 
   private setupHudTexts() {
@@ -1184,7 +1168,6 @@ export default class CombatScene extends Phaser.Scene {
     this.healthText.setVisible(isVisible);
     this.enemiesText.setVisible(isVisible);
     this.scoreText.setVisible(isVisible);
-    this.pauseButton?.setVisible(isVisible);
     setBossHudVisible(this.bossHud, isVisible && this.isBossAlive());
   }
 
@@ -1307,6 +1290,15 @@ export default class CombatScene extends Phaser.Scene {
     this.scene.resume();
   }
 
+  private handlePauseInput() {
+    if (
+      Phaser.Input.Keyboard.JustDown(this.pauseKey) ||
+      virtualInput.consumeAction("pause")
+    ) {
+      this.openPauseMenu();
+    }
+  }
+
   private openPauseMenu() {
     if (
       this.isChoosingAttackMode ||
@@ -1334,6 +1326,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private freezeCombatForPause() {
     this.activeElapsedMs += Date.now() - this.activeStartedAt;
+    this.activeStartedAt = Date.now();
     this.player?.setVelocity(0, 0);
     this.boss?.setVelocity(0, 0);
     this.getActiveEnemies().forEach((enemy) => enemy.setVelocity(0, 0));
