@@ -55,7 +55,7 @@ export function createAttackModeSelection(
     .text(
       config.arenaWidth / 2,
       panelY + 32,
-      "E: auto  SPACE/A: manual\nExit and enter again to change the mode.",
+      "E/BACK: auto  SPACE/A: manual\nExit and enter again to change the mode.",
       {
         fontFamily: "monospace",
         fontSize: "8px",

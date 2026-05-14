@@ -508,7 +508,10 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private handleAttackModeSelectionInput() {
-    if (Phaser.Input.Keyboard.JustDown(this.retryKey)) {
+    if (
+      Phaser.Input.Keyboard.JustDown(this.retryKey) ||
+      virtualInput.consumeAction("back")
+    ) {
       this.selectAttackMode("auto");
       return;
     }
