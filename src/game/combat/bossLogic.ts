@@ -7,6 +7,18 @@ export type Point = {
   y: number;
 };
 
+export type BossHitTransition =
+  | "phase-two"
+  | "phase-three"
+  | "explosion"
+  | "none";
+
+type BossHitTransitionInput = {
+  health: number;
+  phaseTwoStarted: boolean;
+  phaseThreeStarted: boolean;
+};
+
 export function isBossInAttackRange(attackCenter: Point, bossPosition: Point) {
   return (
     Phaser.Math.Distance.Between(
@@ -30,6 +42,26 @@ export function isBossContactDamagingPlayer(
       bossPosition.y,
     ) <= BOSS_CONFIG.contactDamageRadius
   );
+}
+
+export function getBossHitTransition({
+  health,
+  phaseTwoStarted,
+  phaseThreeStarted,
+}: BossHitTransitionInput): BossHitTransition {
+  if (!phaseTwoStarted && health <= BOSS_CONFIG.phaseTwoHealth) {
+    return "phase-two";
+  }
+
+  if (!phaseThreeStarted && health <= BOSS_CONFIG.phaseThreeHealth) {
+    return "phase-three";
+  }
+
+  if (phaseThreeStarted) {
+    return "explosion";
+  }
+
+  return "none";
 }
 
 export function getBossExplosionDangerBounds(arenaBounds: RectBounds) {

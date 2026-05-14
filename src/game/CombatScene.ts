@@ -4,10 +4,7 @@ import {
   createOverlayTexts,
   createStaticTexts,
 } from "./combat/hud";
-import {
-  getAttackHubHint,
-  getManualAttackHubHint,
-} from "./input/inputMode";
+import { getAttackHubHint, getManualAttackHubHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
 import {
@@ -34,6 +31,7 @@ import {
 import { BOSS_CONFIG, type BossActionState } from "./combat/bossConfig";
 import {
   getBossExplosionDangerBounds,
+  getBossHitTransition,
   getBossKnockbackVector,
   isBossContactDamagingPlayer,
   isBossInAttackRange,
@@ -67,7 +65,7 @@ const DAMAGE_COOLDOWN = 900;
 const MAX_NAME_LENGTH = 10;
 const UI_FONT = "11px";
 const TITLE_FONT = "12px";
-const INITIAL_ROUND = 1;
+const INITIAL_ROUND = 10;
 const INITIAL_HEALTH = 3;
 const PLAYER_START_Y_OFFSET = 18;
 const PLAYER_BODY_WIDTH = 14;
@@ -280,21 +278,24 @@ export default class CombatScene extends Phaser.Scene {
     if (!this.isGameOver) return false;
 
     this.player.setVelocity(0, 0);
-    const retryPressed = this.isRetryJustPressed();
-    const savePressed = this.isMobileSaveJustPressed();
     const backPressed = this.isBackJustPressed();
 
     if (this.gameOverFlow?.checkingScore || this.gameOverFlow?.savingRecord) {
       return true;
     }
 
-    if (!this.gameOverFlow?.enteringName && retryPressed) {
+    if (this.gameOverFlow?.enteringName) {
+      if (this.isMobileSaveJustPressed()) {
+        void this.gameOverFlow.saveRecord(this.getGameOverStats());
+      }
+      if (backPressed) this.returnToHub();
+      return true;
+    }
+
+    if (this.isRetryJustPressed()) {
       this.scene.restart({
         attackMode: this.attackMode,
       } satisfies CombatSceneData);
-    }
-    if (this.gameOverFlow?.enteringName && savePressed) {
-      void this.gameOverFlow.saveRecord(this.getGameOverStats());
     }
     if (backPressed) this.returnToHub();
     return true;
@@ -770,21 +771,30 @@ export default class CombatScene extends Phaser.Scene {
     if (this.bossHealth <= 0) {
       this.defeatBoss();
     } else {
-      if (
-        !this.bossPhaseTwoStarted &&
-        this.bossHealth <= BOSS_CONFIG.phaseTwoHealth
-      ) {
-        this.startBossPhaseTwo();
-      }
-      if (
-        !this.bossPhaseThreeStarted &&
-        this.bossHealth <= BOSS_CONFIG.phaseThreeHealth
-      ) {
-        this.startBossPhaseThree();
-      } else if (this.bossPhaseThreeStarted) {
-        this.startBossExplosionSequence();
-      }
+      this.applyBossHitTransition();
       this.drawBossHealthBar();
+    }
+  }
+
+  private applyBossHitTransition() {
+    const transition = getBossHitTransition({
+      health: this.bossHealth,
+      phaseTwoStarted: this.bossPhaseTwoStarted,
+      phaseThreeStarted: this.bossPhaseThreeStarted,
+    });
+
+    if (transition === "phase-two") {
+      this.startBossPhaseTwo();
+      return;
+    }
+
+    if (transition === "phase-three") {
+      this.startBossPhaseThree();
+      return;
+    }
+
+    if (transition === "explosion") {
+      this.startBossExplosionSequence();
     }
   }
 

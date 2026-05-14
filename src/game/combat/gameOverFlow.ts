@@ -118,11 +118,18 @@ export class CombatGameOverFlow {
   }
 
   async saveRecord(stats: CombatGameOverStats) {
+    const name = this.nameDraft.trim();
+    if (!name) {
+      this.texts.controlsText.setText("ENTER NAME");
+      this.updateNameInput();
+      return;
+    }
+
     this.currentStats = stats;
     this.isSavingRecord = true;
     const entry: RankingEntry = {
       playerId: getPlayerId(),
-      name: this.nameDraft.trim() || "ANON",
+      name,
       score: stats.score,
       round: stats.round,
       kills: stats.kills,
