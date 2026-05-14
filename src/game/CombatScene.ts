@@ -88,6 +88,8 @@ const ROUND_START_DELAY = 900;
 const KILL_SCORE = 100;
 const ROUND_SCORE = 250;
 const SECOND_SCORE = 5;
+const MAX_TIME_SCORE_SECONDS_PER_ROUND = 15;
+const MAX_TIME_SCORE_SECONDS_BOSS_ROUND = 25;
 const ARENA_BOUNDS = {
   x: 12,
   y: 16,
@@ -154,6 +156,8 @@ export default class CombatScene extends Phaser.Scene {
   private kills = 0;
   private activeStartedAt = 0;
   private activeElapsedMs = 0;
+  private roundStartedElapsedMs = 0;
+  private scoredSecondsFromCompletedRounds = 0;
   private finalScore = 0;
   private finalSeconds = 0;
   private facing = new Phaser.Math.Vector2(1, 0);
@@ -338,6 +342,8 @@ export default class CombatScene extends Phaser.Scene {
     this.kills = 0;
     this.activeStartedAt = Date.now();
     this.activeElapsedMs = 0;
+    this.roundStartedElapsedMs = 0;
+    this.scoredSecondsFromCompletedRounds = 0;
     this.finalScore = 0;
     this.finalSeconds = 0;
     this.gameOverFlow?.reset();
@@ -549,6 +555,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private startRound() {
     this.isChangingRound = false;
+    this.roundStartedElapsedMs = this.getActiveElapsedMs();
     this.messageText.setVisible(false);
     if (this.isBossRound()) {
       this.spawnBoss();
@@ -1102,6 +1109,7 @@ export default class CombatScene extends Phaser.Scene {
     }
 
     this.isChangingRound = true;
+    this.scoredSecondsFromCompletedRounds += this.getCurrentRoundScoreSeconds();
     this.round += 1;
     this.messageText.setText(`ROUND ${this.round}`).setVisible(true);
 
@@ -1206,7 +1214,7 @@ export default class CombatScene extends Phaser.Scene {
     return (
       this.kills * KILL_SCORE +
       this.round * ROUND_SCORE +
-      this.getSurvivedSeconds() * SECOND_SCORE
+      this.getScoredSeconds() * SECOND_SCORE
     );
   }
 
@@ -1222,6 +1230,28 @@ export default class CombatScene extends Phaser.Scene {
   private getSurvivedSeconds() {
     if (this.isGameOver) return this.finalSeconds;
     return Math.floor(this.getActiveElapsedMs() / 1000);
+  }
+
+  private getScoredSeconds() {
+    if (this.isChangingRound) return this.scoredSecondsFromCompletedRounds;
+
+    return (
+      this.scoredSecondsFromCompletedRounds + this.getCurrentRoundScoreSeconds()
+    );
+  }
+
+  private getCurrentRoundScoreSeconds() {
+    const roundElapsedSeconds = Math.floor(
+      (this.getActiveElapsedMs() - this.roundStartedElapsedMs) / 1000,
+    );
+
+    return Math.min(roundElapsedSeconds, this.getMaxTimeScoreSecondsForRound());
+  }
+
+  private getMaxTimeScoreSecondsForRound() {
+    return this.isBossRound()
+      ? MAX_TIME_SCORE_SECONDS_BOSS_ROUND
+      : MAX_TIME_SCORE_SECONDS_PER_ROUND;
   }
 
   private getActiveElapsedMs() {
