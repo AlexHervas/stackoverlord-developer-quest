@@ -16,7 +16,11 @@ import {
   CombatGameOverFlow,
   type CombatGameOverStats,
 } from "./combat/gameOverFlow";
-import { getEnemyTextureKey, getSpawnPoint } from "./combat/enemySpawning";
+import {
+  getBossSpawnPoint,
+  getEnemySpawnPoint,
+  getEnemyTextureKey,
+} from "./combat/enemySpawning";
 import {
   ENEMY_DEFEAT_DEPTH,
   ENEMY_DEFEAT_DURATION,
@@ -71,7 +75,7 @@ const INITIAL_HEALTH = 3;
 const PLAYER_START_Y_OFFSET = 18;
 const PLAYER_BODY_WIDTH = 14;
 const PLAYER_BODY_HEIGHT = 14;
-const ENEMY_SPEED_PER_ROUND = 1;
+const ENEMY_SPEED_PER_ROUND = 0.5;
 const ATTACK_CENTER_OFFSET = 14;
 const ATTACK_HIT_PADDING = 8;
 const PLAYER_HIT_SHAKE_DURATION = 90;
@@ -557,7 +561,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private spawnEnemies(count: number) {
     for (let i = 0; i < count; i += 1) {
-      const point = getSpawnPoint(i, ARENA_BOUNDS);
+      const point = getEnemySpawnPoint(i, count, ARENA_BOUNDS);
       const enemy = this.enemies.create(
         point.x,
         point.y,
@@ -582,7 +586,7 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private spawnBoss() {
-    const point = getSpawnPoint(1, ARENA_BOUNDS);
+    const point = getBossSpawnPoint(ARENA_BOUNDS);
     this.boss = this.physics.add
       .sprite(point.x, point.y, BOSS_CONFIG.textureKey, BOSS_CONFIG.idleFrame)
       .setScale(BOSS_CONFIG.scale)
