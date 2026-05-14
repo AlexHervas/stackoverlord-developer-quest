@@ -127,6 +127,10 @@ export default class HubScene extends Phaser.Scene {
       .staticSprite(230, 40, "arenaNpc")
       .setScale(1);
 
+    this.physics.add.collider(this.player, this.npcCv);
+    this.physics.add.collider(this.player, this.npcAbout);
+    this.physics.add.collider(this.player, this.npcCombat);
+
     this.addNpcLabel(this.npcCv, "CV");
     this.addNpcLabel(this.npcAbout, "ABOUT");
     this.addNpcLabel(this.npcCombat, "ARENA");

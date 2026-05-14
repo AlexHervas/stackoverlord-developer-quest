@@ -155,6 +155,10 @@ export default class PlayScene extends Phaser.Scene {
     this.wizard = this.physics.add
       .staticSprite(ROOM_WIDTH / 2 + 150, ROOM_HEIGHT / 2 + 40, "wizard")
       .setScale(1);
+
+    this.wizard.flipX = true;
+
+    this.physics.add.collider(this.player, this.wizard);
   }
 
   private setupInput() {
@@ -200,10 +204,7 @@ export default class PlayScene extends Phaser.Scene {
     const touchVector = virtualInput.getMoveVector();
 
     if (!isDialogueOpen) {
-      if (
-        this.cursors?.left?.isDown ||
-        virtualInput.isDirectionDown("left")
-      ) {
+      if (this.cursors?.left?.isDown || virtualInput.isDirectionDown("left")) {
         vectorX = -1;
         this.player.setFlipX(true);
         this.player.setAngle(-3);
