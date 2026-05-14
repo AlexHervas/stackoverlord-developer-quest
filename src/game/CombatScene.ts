@@ -33,6 +33,7 @@ import {
   getBossExplosionDangerBounds,
   getBossHitTransition,
   getBossKnockbackVector,
+  getBossPlayerSeparationVector,
   isBossContactDamagingPlayer,
   isBossInAttackRange,
   isPointInsideBounds,
@@ -65,7 +66,7 @@ const DAMAGE_COOLDOWN = 900;
 const MAX_NAME_LENGTH = 10;
 const UI_FONT = "11px";
 const TITLE_FONT = "12px";
-const INITIAL_ROUND = 10;
+const INITIAL_ROUND = 1;
 const INITIAL_HEALTH = 3;
 const PLAYER_START_Y_OFFSET = 18;
 const PLAYER_BODY_WIDTH = 14;
@@ -404,7 +405,8 @@ export default class CombatScene extends Phaser.Scene {
     this.enemies = this.physics.add.group();
     this.physics.add.collider(this.player, wallsLayer);
     this.physics.add.collider(this.enemies, wallsLayer);
-    this.physics.add.overlap(
+    this.physics.add.collider(this.enemies, this.enemies);
+    this.physics.add.collider(
       this.player,
       this.enemies,
       this.handlePlayerHit,
@@ -607,6 +609,7 @@ export default class CombatScene extends Phaser.Scene {
     if (!this.boss?.active) return;
     this.updateBossInvulnerableAuraPosition();
     this.handleBossPlayerHit();
+    this.separatePlayerFromBoss();
     if (this.bossActionState === "exploding") return;
     if (this.time.now < this.bossStunnedUntil) return;
 
@@ -1025,6 +1028,25 @@ export default class CombatScene extends Phaser.Scene {
     if (!isBossContactDamagingPlayer(this.player, this.boss)) return;
     this.handlePlayerHit();
   };
+
+  private separatePlayerFromBoss() {
+    if (!this.boss?.active) return;
+    if (this.bossInvulnerable || this.bossActionState === "exploding") return;
+
+    const separation = getBossPlayerSeparationVector(this.player, this.boss);
+    if (separation.lengthSq() === 0) return;
+
+    this.player.x = Phaser.Math.Clamp(
+      this.player.x + separation.x,
+      ARENA_BOUNDS.x,
+      ARENA_BOUNDS.x + ARENA_BOUNDS.width,
+    );
+    this.player.y = Phaser.Math.Clamp(
+      this.player.y + separation.y,
+      ARENA_BOUNDS.y,
+      ARENA_BOUNDS.y + ARENA_BOUNDS.height,
+    );
+  }
 
   private playCombatSound(soundConfig: { key: string; volume: number }) {
     if (!this.cache.audio.exists(soundConfig.key)) return;

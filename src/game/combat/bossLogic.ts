@@ -44,6 +44,27 @@ export function isBossContactDamagingPlayer(
   );
 }
 
+export function getBossPlayerSeparationVector(
+  playerPosition: Point,
+  bossPosition: Point,
+  minimumDistance = BOSS_CONFIG.contactDamageRadius,
+) {
+  const offset = new Phaser.Math.Vector2(
+    playerPosition.x - bossPosition.x,
+    playerPosition.y - bossPosition.y,
+  );
+  const distance = offset.length();
+  if (distance >= minimumDistance) return new Phaser.Math.Vector2(0, 0);
+
+  if (distance === 0) {
+    offset.set(1, 0);
+  } else {
+    offset.scale(1 / distance);
+  }
+
+  return offset.scale(minimumDistance - distance);
+}
+
 export function getBossHitTransition({
   health,
   phaseTwoStarted,
