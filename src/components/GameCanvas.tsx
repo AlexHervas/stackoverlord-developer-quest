@@ -6,6 +6,7 @@ import MenuScene from "../game/MenuScene";
 import PlayScene from "../game/PlayScene";
 import HubScene from "../game/HubScene";
 import CombatScene from "../game/CombatScene";
+import CombatPauseScene from "../game/CombatPauseScene";
 import { eventBus, type UiModal } from "../game/events/events";
 import PortfolioModal from "./PortfolioModal";
 import MobileControls from "./MobileControls";
@@ -63,7 +64,14 @@ export default function GameCanvas() {
           gravity: { x: 0, y: 0 },
         },
       },
-      scene: [BootScene, MenuScene, PlayScene, HubScene, CombatScene],
+      scene: [
+        BootScene,
+        MenuScene,
+        PlayScene,
+        HubScene,
+        CombatScene,
+        CombatPauseScene,
+      ],
     });
 
     return () => {

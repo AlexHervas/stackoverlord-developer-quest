@@ -168,8 +168,10 @@ export default class CombatScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private messageText!: Phaser.GameObjects.Text;
   private attackHintText!: Phaser.GameObjects.Text;
+  private pauseButton?: Phaser.GameObjects.Text;
   private musicControl?: ReturnType<typeof createMusicControl>;
   private gameOverFlow?: CombatGameOverFlow;
+  private isPauseMenuOpen = false;
 
   constructor() {
     super("CombatScene");
@@ -212,6 +214,7 @@ export default class CombatScene extends Phaser.Scene {
     this.setupHudTexts();
     this.setupOverlayTexts();
     this.createMusicControl();
+    this.createPauseButton();
     this.setupLifecycleListeners();
 
     if (this.shouldReuseAttackModeOnRetry && this.selectedAttackMode) {
@@ -347,6 +350,7 @@ export default class CombatScene extends Phaser.Scene {
     this.finalScore = 0;
     this.finalSeconds = 0;
     this.gameOverFlow?.reset();
+    this.isPauseMenuOpen = false;
     this.attackMode = this.selectedAttackMode ?? "auto";
     this.isChoosingAttackMode = false;
     this.attackModeOverlay = undefined;
@@ -442,8 +446,11 @@ export default class CombatScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.musicControl?.destroy();
       this.musicControl = undefined;
+      this.pauseButton?.destroy();
+      this.pauseButton = undefined;
       this.gameOverFlow?.destroy();
       this.gameOverFlow = undefined;
+      this.events.off("combat:resume-from-pause", this.resumeFromPauseMenu, this);
       this.input.keyboard?.off("keydown", this.handleNameInput, this);
       window.removeEventListener("blur", this.handleWindowBlur);
       document.removeEventListener(
@@ -451,6 +458,7 @@ export default class CombatScene extends Phaser.Scene {
         this.handleVisibilityChange,
       );
     });
+    this.events.on("combat:resume-from-pause", this.resumeFromPauseMenu, this);
   }
 
   private setupStaticTexts() {
@@ -474,6 +482,23 @@ export default class CombatScene extends Phaser.Scene {
         padding: { x: 4, y: 2 },
       },
     });
+  }
+
+  private createPauseButton() {
+    this.pauseButton = this.add
+      .text(ARENA_WIDTH - 62, 2, "PAUSE", {
+        fontFamily: "monospace",
+        fontSize: "7px",
+        color: "#ffe7a2",
+        backgroundColor: "rgba(0,0,0,0.72)",
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setDepth(20)
+      .setInteractive({ useHandCursor: true });
+
+    this.pauseButton.on("pointerdown", () => this.openPauseMenu());
   }
 
   private setupHudTexts() {
@@ -1159,6 +1184,7 @@ export default class CombatScene extends Phaser.Scene {
     this.healthText.setVisible(isVisible);
     this.enemiesText.setVisible(isVisible);
     this.scoreText.setVisible(isVisible);
+    this.pauseButton?.setVisible(isVisible);
     setBossHudVisible(this.bossHud, isVisible && this.isBossAlive());
   }
 
@@ -1264,18 +1290,53 @@ export default class CombatScene extends Phaser.Scene {
     if (this.isChoosingAttackMode || this.isGameOver || this.scene.isPaused())
       return;
 
-    this.activeElapsedMs += Date.now() - this.activeStartedAt;
-    this.player?.setVelocity(0, 0);
-    this.getActiveEnemies().forEach((enemy) => enemy.setVelocity(0, 0));
+    this.freezeCombatForPause();
     this.scene.pause();
   }
 
   private resumeCombatTimer() {
-    if (this.isChoosingAttackMode || this.isGameOver || !this.scene.isPaused())
+    if (
+      this.isChoosingAttackMode ||
+      this.isGameOver ||
+      this.isPauseMenuOpen ||
+      !this.scene.isPaused()
+    )
       return;
 
     this.activeStartedAt = Date.now();
     this.scene.resume();
+  }
+
+  private openPauseMenu() {
+    if (
+      this.isChoosingAttackMode ||
+      this.isGameOver ||
+      this.gameOverFlow?.enteringName ||
+      this.isPauseMenuOpen ||
+      this.scene.isPaused()
+    ) {
+      return;
+    }
+
+    this.isPauseMenuOpen = true;
+    this.freezeCombatForPause();
+    this.scene.launch("CombatPauseScene");
+    this.scene.pause();
+  }
+
+  private resumeFromPauseMenu() {
+    if (!this.isPauseMenuOpen) return;
+
+    this.isPauseMenuOpen = false;
+    this.activeStartedAt = Date.now();
+    this.scene.resume();
+  }
+
+  private freezeCombatForPause() {
+    this.activeElapsedMs += Date.now() - this.activeStartedAt;
+    this.player?.setVelocity(0, 0);
+    this.boss?.setVelocity(0, 0);
+    this.getActiveEnemies().forEach((enemy) => enemy.setVelocity(0, 0));
   }
 
   private handleWindowBlur = () => {
