@@ -28,6 +28,11 @@ import {
   type HealthPowerUp,
 } from "./combat/healthPowerUp";
 import {
+  createInvulnerabilityPowerUp,
+  getInvulnerabilityPowerUpSpawnPoint,
+  type InvulnerabilityPowerUp,
+} from "./combat/invulnerabilityPowerUp";
+import {
   ENEMY_DEFEAT_DEPTH,
   ENEMY_DEFEAT_DURATION,
   ENEMY_DEFEAT_SCALE,
@@ -91,10 +96,16 @@ const PLAYER_HIT_BLINK_ALPHA = 0.35;
 const PLAYER_HIT_BLINK_DURATION = 80;
 const PLAYER_HIT_BLINK_REPEATS = 5;
 const ROUND_START_DELAY = 900;
+const POWER_UP_GROUND_DURATION = 6000;
+const POWER_UP_GROUND_BLINK_DURATION = 3000;
 const HEALTH_POWER_UP_HEAL = 2;
 const HEALTH_POWER_UP_DROP_CHANCE = 0.15;
-const HEALTH_POWER_UP_DURATION = 6000;
-const HEALTH_POWER_UP_BLINK_DURATION = 3000;
+const INVULNERABILITY_POWER_UP_DROP_CHANCE = 0.05;
+const INVULNERABILITY_POWER_UP_MIN_ROUND = 4;
+const INVULNERABILITY_POWER_UP_DURATION = 4000;
+const INVULNERABILITY_POWER_UP_BLINK_DURATION = 1000;
+const BOSS_INVULNERABILITY_POWER_UP_ATTEMPT_INTERVAL = 7000;
+const BOSS_INVULNERABILITY_POWER_UP_DROP_CHANCE = 0.35;
 const KILL_SCORE = 100;
 const ROUND_SCORE = 250;
 const SECOND_SCORE = 5;
@@ -140,6 +151,7 @@ export default class CombatScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private enemies!: Phaser.Physics.Arcade.Group;
   private healthPowerUps!: Phaser.Physics.Arcade.Group;
+  private invulnerabilityPowerUps!: Phaser.Physics.Arcade.Group;
   private wallsLayer!: Phaser.Tilemaps.TilemapLayer;
   private boss?: Phaser.Physics.Arcade.Sprite;
   private bossHealth = 0;
@@ -159,6 +171,15 @@ export default class CombatScene extends Phaser.Scene {
   private healthPowerUpBlink?: Phaser.Tweens.Tween;
   private healthPowerUpBlinkTimer?: Phaser.Time.TimerEvent;
   private healthPowerUpExpireTimer?: Phaser.Time.TimerEvent;
+  private invulnerabilityPowerUp?: InvulnerabilityPowerUp;
+  private invulnerabilityPowerUpBlink?: Phaser.Tweens.Tween;
+  private invulnerabilityPowerUpBlinkTimer?: Phaser.Time.TimerEvent;
+  private invulnerabilityPowerUpExpireTimer?: Phaser.Time.TimerEvent;
+  private bossInvulnerabilityPowerUpTimer?: Phaser.Time.TimerEvent;
+  private isPlayerPowerUpInvulnerable = false;
+  private playerPowerUpInvulnerabilityTimer?: Phaser.Time.TimerEvent;
+  private playerPowerUpInvulnerabilityBlinkTimer?: Phaser.Time.TimerEvent;
+  private playerPowerUpInvulnerabilityTween?: Phaser.Tweens.Tween;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private escKey!: Phaser.Input.Keyboard.Key;
   private retryKey!: Phaser.Input.Keyboard.Key;
@@ -215,6 +236,7 @@ export default class CombatScene extends Phaser.Scene {
       frameWidth: 16,
       frameHeight: 16,
     });
+    this.load.image("shieldPowerUp", "assets/shield.png");
     this.load.image("phantom", "assets/phantom.png");
     this.load.image("spyder", "assets/spyder.png");
     this.load.spritesheet(BOSS_CONFIG.textureKey, "assets/orc.png", {
@@ -397,6 +419,15 @@ export default class CombatScene extends Phaser.Scene {
     this.healthPowerUpBlink = undefined;
     this.healthPowerUpBlinkTimer = undefined;
     this.healthPowerUpExpireTimer = undefined;
+    this.invulnerabilityPowerUp = undefined;
+    this.invulnerabilityPowerUpBlink = undefined;
+    this.invulnerabilityPowerUpBlinkTimer = undefined;
+    this.invulnerabilityPowerUpExpireTimer = undefined;
+    this.bossInvulnerabilityPowerUpTimer = undefined;
+    this.isPlayerPowerUpInvulnerable = false;
+    this.playerPowerUpInvulnerabilityTimer = undefined;
+    this.playerPowerUpInvulnerabilityBlinkTimer = undefined;
+    this.playerPowerUpInvulnerabilityTween = undefined;
     this.facing.set(1, 0);
   }
 
@@ -461,11 +492,20 @@ export default class CombatScene extends Phaser.Scene {
 
   private createPowerUps(wallsLayer: Phaser.Tilemaps.TilemapLayer) {
     this.healthPowerUps = this.physics.add.group();
+    this.invulnerabilityPowerUps = this.physics.add.group();
     this.physics.add.collider(this.healthPowerUps, wallsLayer);
+    this.physics.add.collider(this.invulnerabilityPowerUps, wallsLayer);
     this.physics.add.overlap(
       this.player,
       this.healthPowerUps,
       this.handleHealthPowerUpCollect,
+      undefined,
+      this,
+    );
+    this.physics.add.overlap(
+      this.player,
+      this.invulnerabilityPowerUps,
+      this.handleInvulnerabilityPowerUpCollect,
       undefined,
       this,
     );
@@ -490,6 +530,9 @@ export default class CombatScene extends Phaser.Scene {
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.clearHealthPowerUp();
+      this.clearInvulnerabilityPowerUp();
+      this.stopBossInvulnerabilityPowerUpAttempts();
+      this.stopPlayerPowerUpInvulnerability();
       this.musicControl?.destroy();
       this.musicControl = undefined;
       this.gameOverFlow?.destroy();
@@ -877,6 +920,8 @@ export default class CombatScene extends Phaser.Scene {
     if (!this.boss?.active) return;
 
     this.bossPhaseTwoStarted = true;
+    this.startBossInvulnerabilityPowerUpAttempts();
+    this.trySpawnInvulnerabilityPowerUp(BOSS_INVULNERABILITY_POWER_UP_DROP_CHANCE);
     this.bossActionState = "recover";
     this.bossActionUntil = this.time.now + BOSS_CONFIG.chargeRecoveryDuration;
     this.nextBossChargeAt = this.time.now + BOSS_CONFIG.chargeInterval;
@@ -1043,6 +1088,7 @@ export default class CombatScene extends Phaser.Scene {
     if (!this.boss?.active) return;
 
     this.kills += 1;
+    this.stopBossInvulnerabilityPowerUpAttempts();
     this.boss.disableBody(false, false);
     this.boss.setTint(BOSS_CONFIG.defeatTint);
     this.boss.setDepth(ENEMY_DEFEAT_DEPTH);
@@ -1069,6 +1115,7 @@ export default class CombatScene extends Phaser.Scene {
     allowDuringBossInvulnerability = false,
   }: { allowDuringBossInvulnerability?: boolean } = {}) {
     if (this.isGameOver) return;
+    if (this.isPlayerPowerUpInvulnerable) return;
     if (this.bossInvulnerable && !allowDuringBossInvulnerability) return;
     if (this.time.now - this.lastDamageAt < DAMAGE_COOLDOWN) return;
 
@@ -1133,11 +1180,12 @@ export default class CombatScene extends Phaser.Scene {
     enemy.disableBody(false, false);
     playEnemyDefeatEffect(this, enemy, this.player, this.facing);
     this.trySpawnHealthPowerUp();
+    this.trySpawnInvulnerabilityPowerUp(INVULNERABILITY_POWER_UP_DROP_CHANCE);
   }
 
   private trySpawnHealthPowerUp() {
     if (this.health >= INITIAL_HEALTH) return;
-    if (this.healthPowerUp?.sprite.active) return;
+    if (this.hasActiveGroundPowerUp()) return;
     if (Phaser.Math.FloatBetween(0, 1) > HEALTH_POWER_UP_DROP_CHANCE) return;
 
     const point = getHealthPowerUpSpawnPoint({
@@ -1157,12 +1205,56 @@ export default class CombatScene extends Phaser.Scene {
       point,
     );
     this.healthPowerUpBlinkTimer = this.time.delayedCall(
-      HEALTH_POWER_UP_DURATION - HEALTH_POWER_UP_BLINK_DURATION,
+      POWER_UP_GROUND_DURATION - POWER_UP_GROUND_BLINK_DURATION,
       () => this.startHealthPowerUpBlink(),
     );
     this.healthPowerUpExpireTimer = this.time.delayedCall(
-      HEALTH_POWER_UP_DURATION,
+      POWER_UP_GROUND_DURATION,
       () => this.clearHealthPowerUp(),
+    );
+  }
+
+  private trySpawnInvulnerabilityPowerUp(dropChance: number) {
+    if (this.isPlayerPowerUpInvulnerable) return;
+    if (this.hasActiveGroundPowerUp()) return;
+    if (!this.canSpawnInvulnerabilityPowerUp()) return;
+    if (Phaser.Math.FloatBetween(0, 1) > dropChance) return;
+
+    const point = getInvulnerabilityPowerUpSpawnPoint({
+      bounds: new Phaser.Geom.Rectangle(
+        ARENA_BOUNDS.x,
+        ARENA_BOUNDS.y,
+        ARENA_BOUNDS.width,
+        ARENA_BOUNDS.height,
+      ),
+      player: this.player,
+      enemies: this.getActiveEnemies(),
+    });
+
+    this.invulnerabilityPowerUp = createInvulnerabilityPowerUp(
+      this,
+      this.invulnerabilityPowerUps,
+      point,
+    );
+    this.invulnerabilityPowerUpBlinkTimer = this.time.delayedCall(
+      POWER_UP_GROUND_DURATION - POWER_UP_GROUND_BLINK_DURATION,
+      () => this.startInvulnerabilityPowerUpBlink(),
+    );
+    this.invulnerabilityPowerUpExpireTimer = this.time.delayedCall(
+      POWER_UP_GROUND_DURATION,
+      () => this.clearInvulnerabilityPowerUp(),
+    );
+  }
+
+  private canSpawnInvulnerabilityPowerUp() {
+    if (this.isBossRound()) return this.bossPhaseTwoStarted;
+    return this.round >= INVULNERABILITY_POWER_UP_MIN_ROUND;
+  }
+
+  private hasActiveGroundPowerUp() {
+    return Boolean(
+      this.healthPowerUp?.sprite.active ||
+        this.invulnerabilityPowerUp?.sprite.active,
     );
   }
 
@@ -1171,6 +1263,18 @@ export default class CombatScene extends Phaser.Scene {
 
     this.healthPowerUpBlink = this.tweens.add({
       targets: this.healthPowerUp.sprite,
+      alpha: 0.22,
+      duration: 140,
+      yoyo: true,
+      repeat: -1,
+    });
+  }
+
+  private startInvulnerabilityPowerUpBlink() {
+    if (!this.invulnerabilityPowerUp?.sprite.active) return;
+
+    this.invulnerabilityPowerUpBlink = this.tweens.add({
+      targets: this.invulnerabilityPowerUp.sprite,
       alpha: 0.22,
       duration: 140,
       yoyo: true,
@@ -1193,6 +1297,57 @@ export default class CombatScene extends Phaser.Scene {
     this.updateHud();
   }
 
+  private handleInvulnerabilityPowerUpCollect = (
+    _player: ArcadeOverlapObject,
+    powerUp: ArcadeOverlapObject,
+  ) => {
+    if (powerUp !== this.invulnerabilityPowerUp?.sprite) return;
+
+    this.startPlayerPowerUpInvulnerability();
+    this.clearInvulnerabilityPowerUp();
+  };
+
+  private startPlayerPowerUpInvulnerability() {
+    this.stopPlayerPowerUpInvulnerability();
+    this.isPlayerPowerUpInvulnerable = true;
+    this.player.setTint(0x7dd3fc);
+
+    this.playerPowerUpInvulnerabilityTimer = this.time.delayedCall(
+      INVULNERABILITY_POWER_UP_DURATION,
+      () => this.stopPlayerPowerUpInvulnerability(),
+    );
+    this.playerPowerUpInvulnerabilityBlinkTimer = this.time.delayedCall(
+      INVULNERABILITY_POWER_UP_DURATION - INVULNERABILITY_POWER_UP_BLINK_DURATION,
+      () => this.startPlayerPowerUpInvulnerabilityBlink(),
+    );
+  }
+
+  private startPlayerPowerUpInvulnerabilityBlink() {
+    if (!this.isPlayerPowerUpInvulnerable || !this.player.active) return;
+
+    this.playerPowerUpInvulnerabilityTween = this.tweens.add({
+      targets: this.player,
+      alpha: 0.45,
+      duration: 90,
+      yoyo: true,
+      repeat: -1,
+    });
+  }
+
+  private stopPlayerPowerUpInvulnerability() {
+    this.playerPowerUpInvulnerabilityTimer?.remove(false);
+    this.playerPowerUpInvulnerabilityBlinkTimer?.remove(false);
+    this.playerPowerUpInvulnerabilityTween?.stop();
+    this.playerPowerUpInvulnerabilityTimer = undefined;
+    this.playerPowerUpInvulnerabilityBlinkTimer = undefined;
+    this.playerPowerUpInvulnerabilityTween = undefined;
+    this.isPlayerPowerUpInvulnerable = false;
+
+    if (!this.player?.active) return;
+    this.player.setAlpha(1);
+    this.player.clearTint();
+  }
+
   private clearHealthPowerUp() {
     this.healthPowerUpBlinkTimer?.remove(false);
     this.healthPowerUpExpireTimer?.remove(false);
@@ -1203,6 +1358,35 @@ export default class CombatScene extends Phaser.Scene {
     this.healthPowerUpExpireTimer = undefined;
     this.healthPowerUpBlink = undefined;
     this.healthPowerUp = undefined;
+  }
+
+  private clearInvulnerabilityPowerUp() {
+    this.invulnerabilityPowerUpBlinkTimer?.remove(false);
+    this.invulnerabilityPowerUpExpireTimer?.remove(false);
+    this.invulnerabilityPowerUpBlink?.stop();
+    this.invulnerabilityPowerUp?.pulseTween.stop();
+    this.invulnerabilityPowerUp?.sprite.destroy();
+    this.invulnerabilityPowerUpBlinkTimer = undefined;
+    this.invulnerabilityPowerUpExpireTimer = undefined;
+    this.invulnerabilityPowerUpBlink = undefined;
+    this.invulnerabilityPowerUp = undefined;
+  }
+
+  private startBossInvulnerabilityPowerUpAttempts() {
+    this.stopBossInvulnerabilityPowerUpAttempts();
+    this.bossInvulnerabilityPowerUpTimer = this.time.addEvent({
+      delay: BOSS_INVULNERABILITY_POWER_UP_ATTEMPT_INTERVAL,
+      loop: true,
+      callback: () =>
+        this.trySpawnInvulnerabilityPowerUp(
+          BOSS_INVULNERABILITY_POWER_UP_DROP_CHANCE,
+        ),
+    });
+  }
+
+  private stopBossInvulnerabilityPowerUpAttempts() {
+    this.bossInvulnerabilityPowerUpTimer?.remove(false);
+    this.bossInvulnerabilityPowerUpTimer = undefined;
   }
 
   private startPlayerInvulnerabilityFeedback() {
@@ -1254,6 +1438,9 @@ export default class CombatScene extends Phaser.Scene {
     this.clearBossExplosionWarning();
     this.stopBossInvulnerableFeedback();
     this.clearHealthPowerUp();
+    this.clearInvulnerabilityPowerUp();
+    this.stopBossInvulnerabilityPowerUpAttempts();
+    this.stopPlayerPowerUpInvulnerability();
     if (this.boss?.active) {
       this.boss.setVelocity(0, 0);
       this.boss.disableBody(true, true);
