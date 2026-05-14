@@ -3,6 +3,7 @@ import {
   createHudTexts,
   createOverlayTexts,
   createStaticTexts,
+  updateHealthHearts,
 } from "./combat/hud";
 import { getAttackHubHint, getManualAttackHubHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
@@ -71,7 +72,7 @@ const MAX_NAME_LENGTH = 10;
 const UI_FONT = "11px";
 const TITLE_FONT = "12px";
 const INITIAL_ROUND = 1;
-const INITIAL_HEALTH = 3;
+const INITIAL_HEALTH = 6;
 const PLAYER_START_Y_OFFSET = 18;
 const PLAYER_BODY_WIDTH = 14;
 const PLAYER_BODY_HEIGHT = 14;
@@ -164,7 +165,7 @@ export default class CombatScene extends Phaser.Scene {
   private facing = new Phaser.Math.Vector2(1, 0);
 
   private roundText!: Phaser.GameObjects.Text;
-  private healthText!: Phaser.GameObjects.Text;
+  private healthHearts: Phaser.GameObjects.Image[] = [];
   private enemiesText!: Phaser.GameObjects.Text;
   private scoreText!: Phaser.GameObjects.Text;
   private messageText!: Phaser.GameObjects.Text;
@@ -190,6 +191,10 @@ export default class CombatScene extends Phaser.Scene {
     this.load.image("combatTiles", "assets/tilemap.png");
     this.load.tilemapTiledJSON("combatArena", "assets/combatArena.json");
     this.load.image("playerSprite", "assets/player.png");
+    this.load.spritesheet("hearts", "assets/hearts.png", {
+      frameWidth: 16,
+      frameHeight: 16,
+    });
     this.load.image("phantom", "assets/phantom.png");
     this.load.image("spyder", "assets/spyder.png");
     this.load.spritesheet(BOSS_CONFIG.textureKey, "assets/orc.png", {
@@ -488,7 +493,7 @@ export default class CombatScene extends Phaser.Scene {
   private setupHudTexts() {
     const hudTexts = createHudTexts(this, HUD_CONFIG);
     this.roundText = hudTexts.roundText;
-    this.healthText = hudTexts.healthText;
+    this.healthHearts = hudTexts.healthHearts;
     this.enemiesText = hudTexts.enemiesText;
     this.scoreText = hudTexts.scoreText;
   }
@@ -1153,7 +1158,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private updateHud() {
     this.roundText.setText(`ROUND: ${this.round}`);
-    this.healthText.setText(`HEALTH: ${this.health}`);
+    updateHealthHearts(this.healthHearts, this.health);
     this.enemiesText.setText(
       this.isBossAlive()
         ? "BOSS"
@@ -1165,7 +1170,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private setCombatHudVisible(isVisible: boolean) {
     this.roundText.setVisible(isVisible);
-    this.healthText.setVisible(isVisible);
+    this.healthHearts.forEach((heart) => heart.setVisible(isVisible));
     this.enemiesText.setVisible(isVisible);
     this.scoreText.setVisible(isVisible);
     setBossHudVisible(this.bossHud, isVisible && this.isBossAlive());

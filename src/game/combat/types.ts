@@ -24,7 +24,7 @@ export type CombatHudConfig = {
 
 export type CombatHudTexts = {
   roundText: Phaser.GameObjects.Text;
-  healthText: Phaser.GameObjects.Text;
+  healthHearts: Phaser.GameObjects.Image[];
   enemiesText: Phaser.GameObjects.Text;
   scoreText: Phaser.GameObjects.Text;
 };

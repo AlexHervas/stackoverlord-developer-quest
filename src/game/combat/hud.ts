@@ -7,18 +7,17 @@ import type {
 } from "./types";
 import { getAttackHubHint } from "../input/inputMode";
 
+const HEART_FULL_FRAME = 0;
+const HEART_HALF_FRAME = 1;
+const HEART_EMPTY_FRAME = 2;
+const HEART_SIZE = 16;
+const HEART_COUNT = 3;
+const HEART_Y = 0;
+
 export function createStaticTexts(
   scene: Phaser.Scene,
   config: CombatHudConfig,
 ): CombatStaticTexts {
-  scene.add
-    .text(4, 2, "ARENA", {
-      fontFamily: "monospace",
-      fontSize: config.titleFont,
-      color: "#ffe7a2",
-    })
-    .setScrollFactor(0);
-
   const attackHintText = scene.add
     .text(
       config.arenaWidth / 2,
@@ -44,7 +43,7 @@ export function createHudTexts(
   config: CombatHudConfig,
 ): CombatHudTexts {
   const roundText = scene.add
-    .text(8, config.arenaHeight - 34, "", {
+    .text(8, config.arenaHeight - 18, "", {
       fontFamily: "monospace",
       fontSize: config.uiFont,
       color: "#ffffff",
@@ -53,15 +52,13 @@ export function createHudTexts(
     })
     .setScrollFactor(0);
 
-  const healthText = scene.add
-    .text(8, config.arenaHeight - 18, "", {
-      fontFamily: "monospace",
-      fontSize: config.uiFont,
-      color: "#ffe7a2",
-      backgroundColor: "rgba(0,0,0,0.45)",
-      padding: { x: 4, y: 2 },
-    })
-    .setScrollFactor(0);
+  const healthHearts = Array.from({ length: HEART_COUNT }, (_, index) =>
+    scene.add
+      .image(4 + index * HEART_SIZE, HEART_Y, "hearts", HEART_FULL_FRAME)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(10),
+  );
 
   const enemiesText = scene.add
     .text(config.arenaWidth - 8, config.arenaHeight - 18, "", {
@@ -87,10 +84,26 @@ export function createHudTexts(
 
   return {
     roundText,
-    healthText,
+    healthHearts,
     enemiesText,
     scoreText,
   };
+}
+
+export function updateHealthHearts(
+  hearts: Phaser.GameObjects.Image[],
+  health: number,
+) {
+  hearts.forEach((heart, index) => {
+    const heartHealth = health - index * 2;
+    if (heartHealth >= 2) {
+      heart.setFrame(HEART_FULL_FRAME);
+    } else if (heartHealth === 1) {
+      heart.setFrame(HEART_HALF_FRAME);
+    } else {
+      heart.setFrame(HEART_EMPTY_FRAME);
+    }
+  });
 }
 
 export function createOverlayTexts(
