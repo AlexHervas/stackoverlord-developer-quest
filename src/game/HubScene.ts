@@ -2,6 +2,12 @@ import Phaser from "phaser";
 import { eventBus, type UiModal } from "./events/events";
 import { getInteractHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
+import {
+  formatRankingRows,
+  getBestScore,
+  getPlayerId,
+  loadRanking,
+} from "./combat/ranking";
 import { createMusicControl } from "./ui/musicControl";
 
 const ROOM_WIDTH = 320;
@@ -13,11 +19,15 @@ const ARENA_DIALOG_TEXT =
   "Only the finest survive this floor.\nReach round 10 and face the Stack Overlord.\nEnter ready, or do not enter at all.";
 const ARENA_DIALOG = {
   x: ROOM_WIDTH / 2,
-  y: ROOM_HEIGHT - 10,
+  y: ROOM_HEIGHT - 6,
   width: 280,
-  height: 92,
+  height: 104,
   textWidth: 250,
 };
+const ARENA_DIALOG_OPTION_WIDTH = 70;
+const ARENA_RANKING_X = ARENA_DIALOG.x - ARENA_DIALOG.textWidth / 2 + 22;
+const ARENA_CONTENT_RAISE = 8;
+const ARENA_RANKING_Y = ARENA_DIALOG.y - 69 - ARENA_CONTENT_RAISE;
 const TYPEWRITER_SPEED = 34;
 const UI_STYLE = {
   fontFamily: "monospace",
@@ -43,6 +53,7 @@ const HUB_AUDIO = {
 type HubAction = "cv" | "about" | "combat";
 type HubSpawn = "default" | "arena";
 type ArenaDialogueState = "closed" | "opening" | "typing" | "ready";
+type ArenaDialogMode = "intro" | "ranking";
 
 export default class HubScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -58,8 +69,14 @@ export default class HubScene extends Phaser.Scene {
   private arenaDialogOptions: Array<
     Phaser.GameObjects.Rectangle | Phaser.GameObjects.Text
   > = [];
+  private arenaRankingText?: Phaser.GameObjects.Text;
+  private arenaRankingBackOption: Array<
+    Phaser.GameObjects.Rectangle | Phaser.GameObjects.Text
+  > = [];
   private isArenaDialogOpen = false;
   private arenaDialogueState: ArenaDialogueState = "closed";
+  private arenaDialogMode: ArenaDialogMode = "intro";
+  private isArenaRankingLoading = false;
   private typedArenaCharacterCount = 0;
   private arenaTypewriterTimer?: Phaser.Time.TimerEvent;
   private arenaSpeechTimer?: Phaser.Time.TimerEvent;
@@ -322,12 +339,15 @@ export default class HubScene extends Phaser.Scene {
   private openArenaDialog() {
     this.isArenaDialogOpen = true;
     this.arenaDialogueState = "opening";
+    this.arenaDialogMode = "intro";
+    this.isArenaRankingLoading = false;
     this.typedArenaCharacterCount = 0;
     this.pausePlayerMovement();
     this.promptText?.setVisible(false);
     this.arenaDialog ??= this.createArenaDialog();
     this.arenaDialogText?.setText("").setVisible(false);
     this.setArenaDialogOptionsVisible(false);
+    this.setArenaRankingVisible(false);
     this.arenaDialogPanel?.setScale(1, 0);
     this.arenaDialog.setVisible(true);
 
@@ -349,10 +369,13 @@ export default class HubScene extends Phaser.Scene {
     this.stopArenaDialogueTimers();
     this.isArenaDialogOpen = false;
     this.arenaDialogueState = "closed";
+    this.arenaDialogMode = "intro";
+    this.isArenaRankingLoading = false;
     this.typedArenaCharacterCount = 0;
     this.arenaDialog?.setVisible(false);
     this.arenaDialogText?.setText("").setVisible(false);
     this.setArenaDialogOptionsVisible(false);
+    this.setArenaRankingVisible(false);
   }
 
   private enterArena() {
@@ -363,6 +386,13 @@ export default class HubScene extends Phaser.Scene {
   }
 
   private handleArenaDialogInput() {
+    if (this.arenaDialogMode === "ranking") {
+      if (this.isBackJustPressed() || this.isInteractJustPressed()) {
+        this.showArenaIntroOptions();
+      }
+      return;
+    }
+
     if (this.arenaDialogueState === "typing" && this.isInteractJustPressed()) {
       this.completeArenaDialogueText();
       return;
@@ -402,17 +432,22 @@ export default class HubScene extends Phaser.Scene {
     this.arenaDialogPanel = panel;
 
     const title = this.add
-      .text(ARENA_DIALOG.x, ARENA_DIALOG.y - 84, "ARENA GUARDIAN", {
+      .text(
+        ARENA_DIALOG.x,
+        ARENA_DIALOG.y - 84 - ARENA_CONTENT_RAISE,
+        "ARENA GUARDIAN",
+        {
         fontFamily: "monospace",
         fontSize: "10px",
         color: "#ffe7a2",
-      })
+        },
+      )
       .setOrigin(0.5, 0);
 
     const dialogue = this.add
       .text(
         ARENA_DIALOG.x,
-        ARENA_DIALOG.y - 66,
+        ARENA_DIALOG.y - 66 - ARENA_CONTENT_RAISE,
         "",
         {
           fontFamily: "monospace",
@@ -427,26 +462,57 @@ export default class HubScene extends Phaser.Scene {
     this.arenaDialogText = dialogue;
 
     const enterOption = this.createArenaDialogOption(
-      ARENA_DIALOG.x - 58,
-      ARENA_DIALOG.y - 17,
+      ARENA_DIALOG.x - 80,
+      ARENA_DIALOG.y - 17 - ARENA_CONTENT_RAISE,
       "ENTER",
       () => this.enterArena(),
     );
     const leaveOption = this.createArenaDialogOption(
-      ARENA_DIALOG.x + 58,
-      ARENA_DIALOG.y - 17,
+      ARENA_DIALOG.x + 80,
+      ARENA_DIALOG.y - 17 - ARENA_CONTENT_RAISE,
       "LEAVE",
       () => this.closeArenaDialog(),
     );
-    this.arenaDialogOptions = [...enterOption, ...leaveOption];
+    const rankingOption = this.createArenaDialogOption(
+      ARENA_DIALOG.x,
+      ARENA_DIALOG.y - 17 - ARENA_CONTENT_RAISE,
+      "RANKING",
+      () => {
+        void this.showArenaRanking();
+      },
+    );
+    const rankingText = this.add
+      .text(ARENA_RANKING_X, ARENA_RANKING_Y, "", {
+        fontFamily: "monospace",
+        fontSize: "9px",
+        color: "#f8efe0",
+        align: "left",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    this.arenaRankingText = rankingText;
+    const rankingBackOption = this.createArenaDialogOption(
+      ARENA_DIALOG.x + ARENA_DIALOG.width / 2 - 34,
+      ARENA_DIALOG.y - ARENA_DIALOG.height + 12,
+      "BACK",
+      () => this.showArenaIntroOptions(),
+      54,
+      16,
+    );
+    this.arenaDialogOptions = [...enterOption, ...rankingOption, ...leaveOption];
+    this.arenaRankingBackOption = [...rankingBackOption];
     this.setArenaDialogOptionsVisible(false);
+    this.setArenaRankingVisible(false);
 
     container.add([
       panel,
       title,
       dialogue,
+      rankingText,
       ...enterOption,
+      ...rankingOption,
       ...leaveOption,
+      ...rankingBackOption,
     ]);
 
     return container;
@@ -457,9 +523,11 @@ export default class HubScene extends Phaser.Scene {
     y: number,
     label: string,
     onSelect: () => void,
+    width = ARENA_DIALOG_OPTION_WIDTH,
+    height = 20,
   ): [Phaser.GameObjects.Rectangle, Phaser.GameObjects.Text] {
     const background = this.add
-      .rectangle(x, y, 78, 20, 0x3a2418, 1)
+      .rectangle(x, y, width, height, 0x3a2418, 1)
       .setOrigin(0.5)
       .setStrokeStyle(1, 0xffe7a2, 0.75)
       .setInteractive({ useHandCursor: true });
@@ -467,7 +535,7 @@ export default class HubScene extends Phaser.Scene {
     const text = this.add
       .text(x, y, label, {
         fontFamily: "monospace",
-        fontSize: "9px",
+        fontSize: height < 20 ? "8px" : "9px",
         color: "#ffe7a2",
       })
       .setOrigin(0.5);
@@ -519,6 +587,46 @@ export default class HubScene extends Phaser.Scene {
     this.setArenaDialogOptionsVisible(true);
   }
 
+  private async showArenaRanking() {
+    if (this.isArenaRankingLoading) return;
+
+    this.arenaDialogMode = "ranking";
+    this.isArenaRankingLoading = true;
+    this.stopArenaDialogueTimers();
+    this.arenaDialogText?.setVisible(false);
+    this.setArenaDialogOptionsVisible(false);
+    this.arenaRankingText?.setText("LOADING RANKING...").setVisible(true);
+    this.setArenaRankingBackVisible(false);
+
+    const playerId = getPlayerId();
+    const [ranking, bestScore] = await Promise.all([
+      loadRanking(),
+      getBestScore(playerId),
+    ]);
+    if (!this.scene.isActive() || this.arenaDialogMode !== "ranking") return;
+
+    const rows = formatRankingColumns(formatRankingRows(ranking));
+    const bestScoreText = bestScore.hasBestScore
+      ? `YOUR BEST: ${bestScore.score}`
+      : "YOUR BEST: NONE";
+    this.arenaRankingText
+      ?.setText([`TOP 10 ARENA   ${bestScoreText}`, "", ...rows].join("\n"))
+      .setVisible(true);
+    this.setArenaRankingBackVisible(true);
+    this.isArenaRankingLoading = false;
+  }
+
+  private showArenaIntroOptions() {
+    this.arenaDialogMode = "intro";
+    this.isArenaRankingLoading = false;
+    this.arenaRankingText?.setVisible(false);
+    this.setArenaRankingBackVisible(false);
+    this.arenaDialogText?.setText(ARENA_DIALOG_TEXT).setVisible(true);
+    this.arenaDialogueState = "ready";
+    this.setArenaDialogOptionsVisible(true);
+    virtualInput.clearActions();
+  }
+
   private startArenaSpeechLoop() {
     if (!this.cache.audio.exists(HUB_AUDIO.speech.key)) return;
 
@@ -546,6 +654,15 @@ export default class HubScene extends Phaser.Scene {
 
   private setArenaDialogOptionsVisible(isVisible: boolean) {
     this.arenaDialogOptions.forEach((option) => option.setVisible(isVisible));
+  }
+
+  private setArenaRankingVisible(isVisible: boolean) {
+    this.arenaRankingText?.setVisible(isVisible);
+    this.setArenaRankingBackVisible(isVisible);
+  }
+
+  private setArenaRankingBackVisible(isVisible: boolean) {
+    this.arenaRankingBackOption.forEach((option) => option.setVisible(isVisible));
   }
 
   private pausePlayerMovement() {
@@ -619,4 +736,18 @@ export default class HubScene extends Phaser.Scene {
       flipX: false,
     };
   }
+}
+
+function formatRankingColumns(rows: string[]) {
+  const normalizedRows = rows.slice(0, 10);
+  const leftRows = normalizedRows.slice(0, 5);
+  const rightRows = normalizedRows.slice(5, 10);
+  const leftWidth = Math.max(...leftRows.map((row) => row.length), 18);
+
+  return leftRows.map((leftRow, index) => {
+    const rightRow = rightRows[index];
+    return rightRow
+      ? `${leftRow.padEnd(leftWidth, " ")}   ${rightRow}`
+      : leftRow;
+  });
 }
