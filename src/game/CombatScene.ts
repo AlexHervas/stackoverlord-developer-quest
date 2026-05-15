@@ -18,6 +18,7 @@ import {
   CombatGameOverFlow,
   type CombatGameOverStats,
 } from "./combat/gameOverFlow";
+import { CombatScoreTracker } from "./combat/combatScore";
 import {
   getBossSpawnPoint,
   getEnemySpawnPoint,
@@ -125,6 +126,13 @@ const HUD_CONFIG = {
   titleFont: TITLE_FONT,
   uiFont: UI_FONT,
 };
+const SCORE_CONFIG = {
+  killScore: KILL_SCORE,
+  roundScore: ROUND_SCORE,
+  secondScore: SECOND_SCORE,
+  maxTimeScoreSecondsPerRound: MAX_TIME_SCORE_SECONDS_PER_ROUND,
+  maxTimeScoreSecondsBossRound: MAX_TIME_SCORE_SECONDS_BOSS_ROUND,
+};
 const COMBAT_AUDIO = {
   music: {
     key: "combatSceneMusic",
@@ -193,10 +201,7 @@ export default class CombatScene extends Phaser.Scene {
   private isChangingRound = false;
   private isGameOver = false;
   private kills = 0;
-  private activeStartedAt = 0;
-  private activeElapsedMs = 0;
-  private roundStartedElapsedMs = 0;
-  private scoredSecondsFromCompletedRounds = 0;
+  private scoreTracker = new CombatScoreTracker(SCORE_CONFIG);
   private finalScore = 0;
   private finalSeconds = 0;
   private facing = new Phaser.Math.Vector2(1, 0);
@@ -386,10 +391,7 @@ export default class CombatScene extends Phaser.Scene {
     this.isChangingRound = false;
     this.isGameOver = false;
     this.kills = 0;
-    this.activeStartedAt = Date.now();
-    this.activeElapsedMs = 0;
-    this.roundStartedElapsedMs = 0;
-    this.scoredSecondsFromCompletedRounds = 0;
+    this.scoreTracker.reset();
     this.finalScore = 0;
     this.finalSeconds = 0;
     this.gameOverFlow?.reset();
@@ -638,7 +640,7 @@ export default class CombatScene extends Phaser.Scene {
     this.attackModeOverlay?.destroy(true);
     this.attackModeOverlay = undefined;
     virtualInput.clearActions();
-    this.activeStartedAt = Date.now();
+    this.scoreTracker.startActive();
     this.setCombatHudVisible(true);
     this.attackHintText.setText(this.getAttackHint()).setVisible(true);
     this.startRound();
@@ -652,7 +654,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private startRound() {
     this.isChangingRound = false;
-    this.roundStartedElapsedMs = this.getActiveElapsedMs();
+    this.scoreTracker.startRound(this.isBossRound(), this.scene.isPaused());
     this.messageText.setVisible(false);
     if (this.isBossRound()) {
       this.spawnBoss();
@@ -1352,7 +1354,7 @@ export default class CombatScene extends Phaser.Scene {
     }
 
     this.isChangingRound = true;
-    this.scoredSecondsFromCompletedRounds += this.getCurrentRoundScoreSeconds();
+    this.scoreTracker.completeRound(this.scene.isPaused());
     this.round += 1;
     this.messageText.setText(`ROUND ${this.round}`).setVisible(true);
 
@@ -1458,11 +1460,12 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private calculateScore() {
-    return (
-      this.kills * KILL_SCORE +
-      this.round * ROUND_SCORE +
-      this.getScoredSeconds() * SECOND_SCORE
-    );
+    return this.scoreTracker.calculateScore({
+      kills: this.kills,
+      round: this.round,
+      isChangingRound: this.isChangingRound,
+      isPaused: this.scene.isPaused(),
+    });
   }
 
   private getGameOverStats(): CombatGameOverStats {
@@ -1475,36 +1478,11 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private getSurvivedSeconds() {
-    if (this.isGameOver) return this.finalSeconds;
-    return Math.floor(this.getActiveElapsedMs() / 1000);
-  }
-
-  private getScoredSeconds() {
-    if (this.isChangingRound) return this.scoredSecondsFromCompletedRounds;
-
-    return (
-      this.scoredSecondsFromCompletedRounds + this.getCurrentRoundScoreSeconds()
-    );
-  }
-
-  private getCurrentRoundScoreSeconds() {
-    const roundElapsedSeconds = Math.floor(
-      (this.getActiveElapsedMs() - this.roundStartedElapsedMs) / 1000,
-    );
-
-    return Math.min(roundElapsedSeconds, this.getMaxTimeScoreSecondsForRound());
-  }
-
-  private getMaxTimeScoreSecondsForRound() {
-    return this.isBossRound()
-      ? MAX_TIME_SCORE_SECONDS_BOSS_ROUND
-      : MAX_TIME_SCORE_SECONDS_PER_ROUND;
-  }
-
-  private getActiveElapsedMs() {
-    if (this.isGameOver) return this.finalSeconds * 1000;
-    if (this.scene.isPaused()) return this.activeElapsedMs;
-    return this.activeElapsedMs + Date.now() - this.activeStartedAt;
+    return this.scoreTracker.getSurvivedSeconds({
+      isGameOver: this.isGameOver,
+      finalSeconds: this.finalSeconds,
+      isPaused: this.scene.isPaused(),
+    });
   }
 
   private pauseCombatTimer() {
@@ -1524,7 +1502,7 @@ export default class CombatScene extends Phaser.Scene {
     )
       return;
 
-    this.activeStartedAt = Date.now();
+    this.scoreTracker.startActive();
     this.scene.resume();
   }
 
@@ -1558,13 +1536,12 @@ export default class CombatScene extends Phaser.Scene {
     if (!this.isPauseMenuOpen) return;
 
     this.isPauseMenuOpen = false;
-    this.activeStartedAt = Date.now();
+    this.scoreTracker.startActive();
     this.scene.resume();
   }
 
   private freezeCombatForPause() {
-    this.activeElapsedMs += Date.now() - this.activeStartedAt;
-    this.activeStartedAt = Date.now();
+    this.scoreTracker.freeze();
     this.player?.setVelocity(0, 0);
     this.boss?.setVelocity(0, 0);
     this.getActiveEnemies().forEach((enemy) => enemy.setVelocity(0, 0));
