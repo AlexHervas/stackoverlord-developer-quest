@@ -9,6 +9,12 @@ import {
   getPlayerId,
   loadRanking,
 } from "./combat/ranking";
+import {
+  ARENA_DIALOG_TEXT,
+  ARENA_TYPEWRITER_SPEED,
+  createArenaGuardianDialog,
+  formatRankingColumns,
+} from "./hub/arenaGuardianDialog";
 import { createMusicControl } from "./ui/musicControl";
 
 const ROOM_WIDTH = 320;
@@ -16,20 +22,6 @@ const ROOM_HEIGHT = 160;
 const SPEED = 90;
 const TALK_RANGE = 18;
 const UI_FONT = "10px";
-const ARENA_DIALOG_TEXT =
-  "Only the finest survive this floor.\nReach round 10 and face the Stack Overlord.\nEnter ready, or do not enter at all.";
-const ARENA_DIALOG = {
-  x: ROOM_WIDTH / 2,
-  y: ROOM_HEIGHT - 6,
-  width: 280,
-  height: 104,
-  textWidth: 250,
-};
-const ARENA_DIALOG_OPTION_WIDTH = 70;
-const ARENA_RANKING_X = ARENA_DIALOG.x - ARENA_DIALOG.textWidth / 2 + 22;
-const ARENA_CONTENT_RAISE = 8;
-const ARENA_RANKING_Y = ARENA_DIALOG.y - 69 - ARENA_CONTENT_RAISE;
-const TYPEWRITER_SPEED = 34;
 const UI_STYLE = {
   fontFamily: "monospace",
   fontSize: UI_FONT,
@@ -413,139 +405,27 @@ export default class HubScene extends Phaser.Scene {
   }
 
   private createArenaDialog() {
-    const container = this.add
-      .container(0, 0)
-      .setScrollFactor(0)
-      .setDepth(30)
-      .setVisible(false);
-
-    const panel = this.add
-      .rectangle(
-        ARENA_DIALOG.x,
-        ARENA_DIALOG.y,
-        ARENA_DIALOG.width,
-        ARENA_DIALOG.height,
-        0x2b1a10,
-        0.92,
-      )
-      .setOrigin(0.5, 1)
-      .setStrokeStyle(1, 0xd6b06a, 0.85);
-    this.arenaDialogPanel = panel;
-
-    const title = this.add
-      .text(
-        ARENA_DIALOG.x,
-        ARENA_DIALOG.y - 84 - ARENA_CONTENT_RAISE,
-        "ARENA GUARDIAN",
-        {
-        fontFamily: "monospace",
-        fontSize: "10px",
-        color: "#ffe7a2",
+    const dialog = createArenaGuardianDialog(
+      this,
+      { roomWidth: ROOM_WIDTH, roomHeight: ROOM_HEIGHT },
+      {
+        onEnter: () => this.enterArena(),
+        onLeave: () => this.closeArenaDialog(),
+        onRanking: () => {
+          void this.showArenaRanking();
         },
-      )
-      .setOrigin(0.5, 0);
-
-    const dialogue = this.add
-      .text(
-        ARENA_DIALOG.x,
-        ARENA_DIALOG.y - 66 - ARENA_CONTENT_RAISE,
-        "",
-        {
-          fontFamily: "monospace",
-          fontSize: "8px",
-          color: "#f8efe0",
-          align: "center",
-          wordWrap: { width: ARENA_DIALOG.textWidth },
-        },
-      )
-      .setOrigin(0.5, 0)
-      .setVisible(false);
-    this.arenaDialogText = dialogue;
-
-    const enterOption = this.createArenaDialogOption(
-      ARENA_DIALOG.x - 80,
-      ARENA_DIALOG.y - 17 - ARENA_CONTENT_RAISE,
-      "ENTER",
-      () => this.enterArena(),
-    );
-    const leaveOption = this.createArenaDialogOption(
-      ARENA_DIALOG.x + 80,
-      ARENA_DIALOG.y - 17 - ARENA_CONTENT_RAISE,
-      "LEAVE",
-      () => this.closeArenaDialog(),
-    );
-    const rankingOption = this.createArenaDialogOption(
-      ARENA_DIALOG.x,
-      ARENA_DIALOG.y - 17 - ARENA_CONTENT_RAISE,
-      "RANKING",
-      () => {
-        void this.showArenaRanking();
+        onRankingBack: () => this.showArenaIntroOptions(),
       },
     );
-    const rankingText = this.add
-      .text(ARENA_RANKING_X, ARENA_RANKING_Y, "", {
-        fontFamily: "monospace",
-        fontSize: "9px",
-        color: "#f8efe0",
-        align: "left",
-      })
-      .setOrigin(0, 0)
-      .setVisible(false);
-    this.arenaRankingText = rankingText;
-    const rankingBackOption = this.createArenaDialogOption(
-      ARENA_DIALOG.x + ARENA_DIALOG.width / 2 - 34,
-      ARENA_DIALOG.y - ARENA_DIALOG.height + 12,
-      "BACK",
-      () => this.showArenaIntroOptions(),
-      54,
-      16,
-    );
-    this.arenaDialogOptions = [...enterOption, ...rankingOption, ...leaveOption];
-    this.arenaRankingBackOption = [...rankingBackOption];
+    this.arenaDialogPanel = dialog.panel;
+    this.arenaDialogText = dialog.dialogueText;
+    this.arenaRankingText = dialog.rankingText;
+    this.arenaDialogOptions = dialog.introOptions;
+    this.arenaRankingBackOption = dialog.rankingBackOption;
     this.setArenaDialogOptionsVisible(false);
     this.setArenaRankingVisible(false);
 
-    container.add([
-      panel,
-      title,
-      dialogue,
-      rankingText,
-      ...enterOption,
-      ...rankingOption,
-      ...leaveOption,
-      ...rankingBackOption,
-    ]);
-
-    return container;
-  }
-
-  private createArenaDialogOption(
-    x: number,
-    y: number,
-    label: string,
-    onSelect: () => void,
-    width = ARENA_DIALOG_OPTION_WIDTH,
-    height = 20,
-  ): [Phaser.GameObjects.Rectangle, Phaser.GameObjects.Text] {
-    const background = this.add
-      .rectangle(x, y, width, height, 0x3a2418, 1)
-      .setOrigin(0.5)
-      .setStrokeStyle(1, 0xffe7a2, 0.75)
-      .setInteractive({ useHandCursor: true });
-
-    const text = this.add
-      .text(x, y, label, {
-        fontFamily: "monospace",
-        fontSize: height < 20 ? "8px" : "9px",
-        color: "#ffe7a2",
-      })
-      .setOrigin(0.5);
-
-    background.on("pointerover", () => background.setFillStyle(0x4f2d16, 1));
-    background.on("pointerout", () => background.setFillStyle(0x3a2418, 1));
-    background.on("pointerdown", onSelect);
-
-    return [background, text];
+    return dialog.container;
   }
 
   private startArenaTypewriter() {
@@ -557,7 +437,7 @@ export default class HubScene extends Phaser.Scene {
     this.startArenaSpeechLoop();
 
     this.arenaTypewriterTimer = this.time.addEvent({
-      delay: TYPEWRITER_SPEED,
+      delay: ARENA_TYPEWRITER_SPEED,
       repeat: ARENA_DIALOG_TEXT.length - 1,
       callback: () => {
         this.typedArenaCharacterCount += 1;
@@ -737,18 +617,4 @@ export default class HubScene extends Phaser.Scene {
       flipX: false,
     };
   }
-}
-
-function formatRankingColumns(rows: string[]) {
-  const normalizedRows = rows.slice(0, 10);
-  const leftRows = normalizedRows.slice(0, 5);
-  const rightRows = normalizedRows.slice(5, 10);
-  const leftWidth = Math.max(...leftRows.map((row) => row.length), 18);
-
-  return leftRows.map((leftRow, index) => {
-    const rightRow = rightRows[index];
-    return rightRow
-      ? `${leftRow.padEnd(leftWidth, " ")}   ${rightRow}`
-      : leftRow;
-  });
 }
