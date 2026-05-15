@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { audioSources } from "./audio/audioSources";
 import { eventBus, type UiModal } from "./events/events";
 import { getInteractHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
@@ -39,12 +40,12 @@ const UI_STYLE = {
 const HUB_AUDIO = {
   music: {
     key: "hubSceneMusic",
-    path: "assets/audio/hubScene_theme.ogg",
+    paths: audioSources("assets/audio/hubScene_theme"),
     volume: 0.22,
   },
   speech: {
     key: "speechSound",
-    path: "assets/audio/speech_sound.ogg",
+    paths: audioSources("assets/audio/speech_sound"),
     volume: 0.5,
     repeatDelay: 88,
   },
@@ -108,9 +109,9 @@ export default class HubScene extends Phaser.Scene {
     this.load.image("aboutNpc", "assets/about_npc.png");
     this.load.image("arenaNpc", "assets/arena_npc.png");
 
-    this.load.audio("interactSound", "assets/audio/select_001.ogg");
-    this.load.audio(HUB_AUDIO.music.key, HUB_AUDIO.music.path);
-    this.load.audio(HUB_AUDIO.speech.key, HUB_AUDIO.speech.path);
+    this.load.audio("interactSound", audioSources("assets/audio/select_001"));
+    this.load.audio(HUB_AUDIO.music.key, HUB_AUDIO.music.paths);
+    this.load.audio(HUB_AUDIO.speech.key, HUB_AUDIO.speech.paths);
   }
 
   create() {

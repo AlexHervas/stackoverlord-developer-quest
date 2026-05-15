@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { audioSources } from "./audio/audioSources";
 import {
   createHudTexts,
   createOverlayTexts,
@@ -126,17 +127,17 @@ const HUD_CONFIG = {
 const COMBAT_AUDIO = {
   music: {
     key: "combatSceneMusic",
-    path: "assets/audio/combatScene_theme.ogg",
+    paths: audioSources("assets/audio/combatScene_theme"),
     volume: 0.12,
   },
   attack: {
     key: "combatSwordSound",
-    path: "assets/audio/sword.ogg",
+    paths: audioSources("assets/audio/sword"),
     volume: 0.05,
   },
   playerHit: {
     key: "combatPlayerHitSound",
-    path: "assets/audio/hit.ogg",
+    paths: audioSources("assets/audio/hit"),
     volume: 0.5,
   },
 };
@@ -243,9 +244,9 @@ export default class CombatScene extends Phaser.Scene {
       frameWidth: BOSS_CONFIG.frameWidth,
       frameHeight: BOSS_CONFIG.frameHeight,
     });
-    this.load.audio(COMBAT_AUDIO.music.key, COMBAT_AUDIO.music.path);
-    this.load.audio(COMBAT_AUDIO.attack.key, COMBAT_AUDIO.attack.path);
-    this.load.audio(COMBAT_AUDIO.playerHit.key, COMBAT_AUDIO.playerHit.path);
+    this.load.audio(COMBAT_AUDIO.music.key, COMBAT_AUDIO.music.paths);
+    this.load.audio(COMBAT_AUDIO.attack.key, COMBAT_AUDIO.attack.paths);
+    this.load.audio(COMBAT_AUDIO.playerHit.key, COMBAT_AUDIO.playerHit.paths);
   }
 
   create() {

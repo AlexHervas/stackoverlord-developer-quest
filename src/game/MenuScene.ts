@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { audioSources } from "./audio/audioSources";
 import { getMoveHint, getStartHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
@@ -19,12 +20,12 @@ const MENU_COLORS = {
 const MENU_AUDIO = {
   select: {
     key: "menuSelectSound",
-    path: "assets/audio/select_001.ogg",
+    paths: audioSources("assets/audio/select_001"),
     volume: 0.22,
   },
   music: {
     key: "menuMusic",
-    path: "assets/audio/menu_theme.ogg",
+    paths: audioSources("assets/audio/menu_theme"),
     volume: 0.03,
   },
 };
@@ -39,11 +40,11 @@ export default class MenuScene extends Phaser.Scene {
 
   preload() {
     if (!this.cache.audio.exists(MENU_AUDIO.select.key)) {
-      this.load.audio(MENU_AUDIO.select.key, MENU_AUDIO.select.path);
+      this.load.audio(MENU_AUDIO.select.key, MENU_AUDIO.select.paths);
     }
 
     if (!this.cache.audio.exists(MENU_AUDIO.music.key)) {
-      this.load.audio(MENU_AUDIO.music.key, MENU_AUDIO.music.path);
+      this.load.audio(MENU_AUDIO.music.key, MENU_AUDIO.music.paths);
     }
   }
 

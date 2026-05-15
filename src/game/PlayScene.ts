@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { audioSources } from "./audio/audioSources";
 import { getContinueHint, getInteractHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
@@ -29,12 +30,12 @@ const TYPEWRITER_SPEED = 34;
 const PLAY_AUDIO = {
   music: {
     key: "playSceneMusic",
-    path: "assets/audio/playScene_theme.ogg",
+    paths: audioSources("assets/audio/playScene_theme"),
     volume: 0.22,
   },
   speech: {
     key: "speechSound",
-    path: "assets/audio/speech_sound.ogg",
+    paths: audioSources("assets/audio/speech_sound"),
     volume: 0.5,
     repeatDelay: 88,
   },
@@ -66,8 +67,8 @@ export default class PlayScene extends Phaser.Scene {
     this.load.tilemapTiledJSON("map", "assets/lvl1MageColliders.json");
     this.load.image("playerSprite", "assets/player.png");
     this.load.image("wizard", "assets/wizard.png");
-    this.load.audio(PLAY_AUDIO.music.key, PLAY_AUDIO.music.path);
-    this.load.audio(PLAY_AUDIO.speech.key, PLAY_AUDIO.speech.path);
+    this.load.audio(PLAY_AUDIO.music.key, PLAY_AUDIO.music.paths);
+    this.load.audio(PLAY_AUDIO.speech.key, PLAY_AUDIO.speech.paths);
   }
 
   create() {
