@@ -3,6 +3,7 @@ import { audioSources } from "./audio/audioSources";
 import { getContinueHint, getInteractHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
+import { TypewriterText } from "./ui/typewriterText";
 
 const ROOM_WIDTH = 320;
 const ROOM_HEIGHT = 160;
@@ -54,9 +55,7 @@ export default class PlayScene extends Phaser.Scene {
   private musicControl?: ReturnType<typeof createMusicControl>;
   private isChangingScene = false;
   private dialogueState: DialogueState = "closed";
-  private typedCharacterCount = 0;
-  private typewriterTimer?: Phaser.Time.TimerEvent;
-  private speechTimer?: Phaser.Time.TimerEvent;
+  private typewriter?: TypewriterText;
 
   constructor() {
     super("PlayScene");
@@ -113,7 +112,7 @@ export default class PlayScene extends Phaser.Scene {
   private resetSceneState() {
     this.isChangingScene = false;
     this.dialogueState = "closed";
-    this.typedCharacterCount = 0;
+    this.typewriter?.reset();
   }
 
   private createRoomLayers() {
@@ -367,32 +366,21 @@ export default class PlayScene extends Phaser.Scene {
     if (!this.dialogueText) return;
 
     this.dialogueState = "typing";
-    this.typedCharacterCount = 0;
-    this.dialogueText.setText("").setVisible(true);
-    this.startSpeechLoop();
-
-    this.typewriterTimer = this.time.addEvent({
+    this.typewriter ??= new TypewriterText(this, PLAY_AUDIO.speech);
+    this.typewriter.start({
+      target: this.dialogueText,
+      text: DIALOG_TEXT,
       delay: TYPEWRITER_SPEED,
-      repeat: DIALOG_TEXT.length - 1,
-      callback: () => {
-        this.typedCharacterCount += 1;
-        this.dialogueText?.setText(
-          DIALOG_TEXT.slice(0, this.typedCharacterCount),
-        );
-
-        if (this.typedCharacterCount >= DIALOG_TEXT.length) {
-          this.finishTypewriter();
-        }
-      },
+      onComplete: () => this.finishTypewriter(),
     });
   }
 
   private completeDialogueText() {
     if (!this.dialogueText) return;
 
-    this.typewriterTimer?.remove(false);
-    this.dialogueText.setText(DIALOG_TEXT);
-    this.finishTypewriter();
+    this.typewriter?.complete(this.dialogueText, DIALOG_TEXT, () =>
+      this.finishTypewriter(),
+    );
   }
 
   private finishTypewriter() {
@@ -403,35 +391,14 @@ export default class PlayScene extends Phaser.Scene {
     this.continueText?.setVisible(true);
   }
 
-  private startSpeechLoop() {
-    if (!this.cache.audio.exists(PLAY_AUDIO.speech.key)) return;
-
-    this.sound.play(PLAY_AUDIO.speech.key, {
-      volume: PLAY_AUDIO.speech.volume,
-    });
-
-    this.speechTimer = this.time.addEvent({
-      delay: PLAY_AUDIO.speech.repeatDelay,
-      loop: true,
-      callback: () => {
-        this.sound.play(PLAY_AUDIO.speech.key, {
-          volume: PLAY_AUDIO.speech.volume,
-        });
-      },
-    });
-  }
-
   private stopDialogueTimers() {
-    this.typewriterTimer?.remove(false);
-    this.speechTimer?.remove(false);
-    this.typewriterTimer = undefined;
-    this.speechTimer = undefined;
+    this.typewriter?.stop();
   }
 
   private closeDialogue() {
     this.stopDialogueTimers();
     this.dialogueState = "closed";
-    this.typedCharacterCount = 0;
+    this.typewriter?.reset();
     this.dialoguePanel?.setVisible(false);
     this.dialogueText?.setText("").setVisible(false);
     this.continueText?.setVisible(false);

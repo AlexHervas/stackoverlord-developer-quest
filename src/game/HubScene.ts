@@ -16,6 +16,7 @@ import {
   formatRankingColumns,
 } from "./hub/arenaGuardianDialog";
 import { createMusicControl } from "./ui/musicControl";
+import { TypewriterText } from "./ui/typewriterText";
 
 const ROOM_WIDTH = 320;
 const ROOM_HEIGHT = 160;
@@ -70,9 +71,7 @@ export default class HubScene extends Phaser.Scene {
   private arenaDialogueState: ArenaDialogueState = "closed";
   private arenaDialogMode: ArenaDialogMode = "intro";
   private isArenaRankingLoading = false;
-  private typedArenaCharacterCount = 0;
-  private arenaTypewriterTimer?: Phaser.Time.TimerEvent;
-  private arenaSpeechTimer?: Phaser.Time.TimerEvent;
+  private arenaTypewriter?: TypewriterText;
 
   private npcCv!: Phaser.Physics.Arcade.Sprite;
   private npcAbout!: Phaser.Physics.Arcade.Sprite;
@@ -334,7 +333,6 @@ export default class HubScene extends Phaser.Scene {
     this.arenaDialogueState = "opening";
     this.arenaDialogMode = "intro";
     this.isArenaRankingLoading = false;
-    this.typedArenaCharacterCount = 0;
     this.pausePlayerMovement();
     this.promptText?.setVisible(false);
     this.arenaDialog ??= this.createArenaDialog();
@@ -364,7 +362,7 @@ export default class HubScene extends Phaser.Scene {
     this.arenaDialogueState = "closed";
     this.arenaDialogMode = "intro";
     this.isArenaRankingLoading = false;
-    this.typedArenaCharacterCount = 0;
+    this.arenaTypewriter?.reset();
     this.arenaDialog?.setVisible(false);
     this.arenaDialogText?.setText("").setVisible(false);
     this.setArenaDialogOptionsVisible(false);
@@ -432,32 +430,23 @@ export default class HubScene extends Phaser.Scene {
     if (!this.arenaDialogText) return;
 
     this.arenaDialogueState = "typing";
-    this.typedArenaCharacterCount = 0;
-    this.arenaDialogText.setText("").setVisible(true);
-    this.startArenaSpeechLoop();
-
-    this.arenaTypewriterTimer = this.time.addEvent({
+    this.arenaTypewriter ??= new TypewriterText(this, HUB_AUDIO.speech);
+    this.arenaTypewriter.start({
+      target: this.arenaDialogText,
+      text: ARENA_DIALOG_TEXT,
       delay: ARENA_TYPEWRITER_SPEED,
-      repeat: ARENA_DIALOG_TEXT.length - 1,
-      callback: () => {
-        this.typedArenaCharacterCount += 1;
-        this.arenaDialogText?.setText(
-          ARENA_DIALOG_TEXT.slice(0, this.typedArenaCharacterCount),
-        );
-
-        if (this.typedArenaCharacterCount >= ARENA_DIALOG_TEXT.length) {
-          this.finishArenaTypewriter();
-        }
-      },
+      onComplete: () => this.finishArenaTypewriter(),
     });
   }
 
   private completeArenaDialogueText() {
     if (!this.arenaDialogText) return;
 
-    this.arenaTypewriterTimer?.remove(false);
-    this.arenaDialogText.setText(ARENA_DIALOG_TEXT);
-    this.finishArenaTypewriter();
+    this.arenaTypewriter?.complete(
+      this.arenaDialogText,
+      ARENA_DIALOG_TEXT,
+      () => this.finishArenaTypewriter(),
+    );
   }
 
   private finishArenaTypewriter() {
@@ -508,29 +497,8 @@ export default class HubScene extends Phaser.Scene {
     virtualInput.clearActions();
   }
 
-  private startArenaSpeechLoop() {
-    if (!this.cache.audio.exists(HUB_AUDIO.speech.key)) return;
-
-    this.sound.play(HUB_AUDIO.speech.key, {
-      volume: HUB_AUDIO.speech.volume,
-    });
-
-    this.arenaSpeechTimer = this.time.addEvent({
-      delay: HUB_AUDIO.speech.repeatDelay,
-      loop: true,
-      callback: () => {
-        this.sound.play(HUB_AUDIO.speech.key, {
-          volume: HUB_AUDIO.speech.volume,
-        });
-      },
-    });
-  }
-
   private stopArenaDialogueTimers() {
-    this.arenaTypewriterTimer?.remove(false);
-    this.arenaSpeechTimer?.remove(false);
-    this.arenaTypewriterTimer = undefined;
-    this.arenaSpeechTimer = undefined;
+    this.arenaTypewriter?.stop();
   }
 
   private setArenaDialogOptionsVisible(isVisible: boolean) {
