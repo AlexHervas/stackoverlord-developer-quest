@@ -9,6 +9,16 @@ const ROOM_HEIGHT = 160;
 const SPEED = 90;
 const TALK_RANGE = 18;
 const UI_FONT = "10px";
+const ARENA_DIALOG_TEXT =
+  "Only the finest survive this floor.\nReach round 10 and face the Stack Overlord.\nEnter ready, or do not enter at all.";
+const ARENA_DIALOG = {
+  x: ROOM_WIDTH / 2,
+  y: ROOM_HEIGHT - 10,
+  width: 280,
+  height: 92,
+  textWidth: 250,
+};
+const TYPEWRITER_SPEED = 34;
 const UI_STYLE = {
   fontFamily: "monospace",
   fontSize: UI_FONT,
@@ -22,10 +32,17 @@ const HUB_AUDIO = {
     path: "assets/audio/hubScene_theme.ogg",
     volume: 0.22,
   },
+  speech: {
+    key: "speechSound",
+    path: "assets/audio/speech_sound.ogg",
+    volume: 0.5,
+    repeatDelay: 88,
+  },
 };
 
 type HubAction = "cv" | "about" | "combat";
 type HubSpawn = "default" | "arena";
+type ArenaDialogueState = "closed" | "opening" | "typing" | "ready";
 
 export default class HubScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -35,6 +52,17 @@ export default class HubScene extends Phaser.Scene {
   private escKey!: Phaser.Input.Keyboard.Key;
 
   private promptText?: Phaser.GameObjects.Text;
+  private arenaDialog?: Phaser.GameObjects.Container;
+  private arenaDialogPanel?: Phaser.GameObjects.Rectangle;
+  private arenaDialogText?: Phaser.GameObjects.Text;
+  private arenaDialogOptions: Array<
+    Phaser.GameObjects.Rectangle | Phaser.GameObjects.Text
+  > = [];
+  private isArenaDialogOpen = false;
+  private arenaDialogueState: ArenaDialogueState = "closed";
+  private typedArenaCharacterCount = 0;
+  private arenaTypewriterTimer?: Phaser.Time.TimerEvent;
+  private arenaSpeechTimer?: Phaser.Time.TimerEvent;
 
   private npcCv!: Phaser.Physics.Arcade.Sprite;
   private npcAbout!: Phaser.Physics.Arcade.Sprite;
@@ -65,10 +93,12 @@ export default class HubScene extends Phaser.Scene {
 
     this.load.audio("interactSound", "assets/audio/select_001.ogg");
     this.load.audio(HUB_AUDIO.music.key, HUB_AUDIO.music.path);
+    this.load.audio(HUB_AUDIO.speech.key, HUB_AUDIO.speech.path);
   }
 
   create() {
     virtualInput.clearActions();
+    this.resetArenaDialogState();
     const map = this.make.tilemap({ key: "lvl2" });
     const tileset = map.addTilesetImage("tiles_level2", "tiles_image");
     if (!tileset) throw new Error("Tileset not found");
@@ -144,9 +174,10 @@ export default class HubScene extends Phaser.Scene {
   update() {
     if (!this.player || !this.cursors) return;
 
-    if (this.isNpcModalOpen) {
+    if (this.isNpcModalOpen || this.isArenaDialogOpen) {
       this.pausePlayerMovement();
       this.promptText?.setVisible(false);
+      if (this.isArenaDialogOpen) this.handleArenaDialogInput();
       return;
     }
 
@@ -223,9 +254,7 @@ export default class HubScene extends Phaser.Scene {
       } else if (action === "about") {
         this.openNpcModal("about");
       } else if (action === "combat") {
-        this.musicControl?.stop();
-        virtualInput.clearActions();
-        this.scene.start("CombatScene", { forceAttackModeSelection: true });
+        this.openArenaDialog();
       }
     }
   }
@@ -275,6 +304,9 @@ export default class HubScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.removeUiCloseListener?.();
       this.removeUiCloseListener = undefined;
+      this.stopArenaDialogueTimers();
+      this.arenaDialog?.destroy(true);
+      this.arenaDialog = undefined;
       this.musicControl?.destroy();
       this.musicControl = undefined;
     });
@@ -285,6 +317,235 @@ export default class HubScene extends Phaser.Scene {
     this.pausePlayerMovement();
     this.promptText?.setVisible(false);
     eventBus.emit("ui:open", { modal });
+  }
+
+  private openArenaDialog() {
+    this.isArenaDialogOpen = true;
+    this.arenaDialogueState = "opening";
+    this.typedArenaCharacterCount = 0;
+    this.pausePlayerMovement();
+    this.promptText?.setVisible(false);
+    this.arenaDialog ??= this.createArenaDialog();
+    this.arenaDialogText?.setText("").setVisible(false);
+    this.setArenaDialogOptionsVisible(false);
+    this.arenaDialogPanel?.setScale(1, 0);
+    this.arenaDialog.setVisible(true);
+
+    this.tweens.add({
+      targets: this.arenaDialogPanel,
+      scaleY: 1,
+      duration: 180,
+      ease: "Quad.easeOut",
+      onComplete: () => this.startArenaTypewriter(),
+    });
+  }
+
+  private closeArenaDialog() {
+    this.resetArenaDialogState();
+    virtualInput.clearActions();
+  }
+
+  private resetArenaDialogState() {
+    this.stopArenaDialogueTimers();
+    this.isArenaDialogOpen = false;
+    this.arenaDialogueState = "closed";
+    this.typedArenaCharacterCount = 0;
+    this.arenaDialog?.setVisible(false);
+    this.arenaDialogText?.setText("").setVisible(false);
+    this.setArenaDialogOptionsVisible(false);
+  }
+
+  private enterArena() {
+    this.resetArenaDialogState();
+    this.musicControl?.stop();
+    virtualInput.clearActions();
+    this.scene.start("CombatScene", { forceAttackModeSelection: true });
+  }
+
+  private handleArenaDialogInput() {
+    if (this.arenaDialogueState === "typing" && this.isInteractJustPressed()) {
+      this.completeArenaDialogueText();
+      return;
+    }
+
+    if (this.arenaDialogueState !== "ready") {
+      if (this.isBackJustPressed()) this.closeArenaDialog();
+      return;
+    }
+
+    if (this.isInteractJustPressed()) {
+      this.enterArena();
+      return;
+    }
+
+    if (this.isBackJustPressed()) this.closeArenaDialog();
+  }
+
+  private createArenaDialog() {
+    const container = this.add
+      .container(0, 0)
+      .setScrollFactor(0)
+      .setDepth(30)
+      .setVisible(false);
+
+    const panel = this.add
+      .rectangle(
+        ARENA_DIALOG.x,
+        ARENA_DIALOG.y,
+        ARENA_DIALOG.width,
+        ARENA_DIALOG.height,
+        0x2b1a10,
+        0.92,
+      )
+      .setOrigin(0.5, 1)
+      .setStrokeStyle(1, 0xd6b06a, 0.85);
+    this.arenaDialogPanel = panel;
+
+    const title = this.add
+      .text(ARENA_DIALOG.x, ARENA_DIALOG.y - 84, "ARENA GUARDIAN", {
+        fontFamily: "monospace",
+        fontSize: "10px",
+        color: "#ffe7a2",
+      })
+      .setOrigin(0.5, 0);
+
+    const dialogue = this.add
+      .text(
+        ARENA_DIALOG.x,
+        ARENA_DIALOG.y - 66,
+        "",
+        {
+          fontFamily: "monospace",
+          fontSize: "8px",
+          color: "#f8efe0",
+          align: "center",
+          wordWrap: { width: ARENA_DIALOG.textWidth },
+        },
+      )
+      .setOrigin(0.5, 0)
+      .setVisible(false);
+    this.arenaDialogText = dialogue;
+
+    const enterOption = this.createArenaDialogOption(
+      ARENA_DIALOG.x - 58,
+      ARENA_DIALOG.y - 17,
+      "ENTER",
+      () => this.enterArena(),
+    );
+    const leaveOption = this.createArenaDialogOption(
+      ARENA_DIALOG.x + 58,
+      ARENA_DIALOG.y - 17,
+      "LEAVE",
+      () => this.closeArenaDialog(),
+    );
+    this.arenaDialogOptions = [...enterOption, ...leaveOption];
+    this.setArenaDialogOptionsVisible(false);
+
+    container.add([
+      panel,
+      title,
+      dialogue,
+      ...enterOption,
+      ...leaveOption,
+    ]);
+
+    return container;
+  }
+
+  private createArenaDialogOption(
+    x: number,
+    y: number,
+    label: string,
+    onSelect: () => void,
+  ): [Phaser.GameObjects.Rectangle, Phaser.GameObjects.Text] {
+    const background = this.add
+      .rectangle(x, y, 78, 20, 0x3a2418, 1)
+      .setOrigin(0.5)
+      .setStrokeStyle(1, 0xffe7a2, 0.75)
+      .setInteractive({ useHandCursor: true });
+
+    const text = this.add
+      .text(x, y, label, {
+        fontFamily: "monospace",
+        fontSize: "9px",
+        color: "#ffe7a2",
+      })
+      .setOrigin(0.5);
+
+    background.on("pointerover", () => background.setFillStyle(0x4f2d16, 1));
+    background.on("pointerout", () => background.setFillStyle(0x3a2418, 1));
+    background.on("pointerdown", onSelect);
+
+    return [background, text];
+  }
+
+  private startArenaTypewriter() {
+    if (!this.arenaDialogText) return;
+
+    this.arenaDialogueState = "typing";
+    this.typedArenaCharacterCount = 0;
+    this.arenaDialogText.setText("").setVisible(true);
+    this.startArenaSpeechLoop();
+
+    this.arenaTypewriterTimer = this.time.addEvent({
+      delay: TYPEWRITER_SPEED,
+      repeat: ARENA_DIALOG_TEXT.length - 1,
+      callback: () => {
+        this.typedArenaCharacterCount += 1;
+        this.arenaDialogText?.setText(
+          ARENA_DIALOG_TEXT.slice(0, this.typedArenaCharacterCount),
+        );
+
+        if (this.typedArenaCharacterCount >= ARENA_DIALOG_TEXT.length) {
+          this.finishArenaTypewriter();
+        }
+      },
+    });
+  }
+
+  private completeArenaDialogueText() {
+    if (!this.arenaDialogText) return;
+
+    this.arenaTypewriterTimer?.remove(false);
+    this.arenaDialogText.setText(ARENA_DIALOG_TEXT);
+    this.finishArenaTypewriter();
+  }
+
+  private finishArenaTypewriter() {
+    if (this.arenaDialogueState === "ready") return;
+
+    this.arenaDialogueState = "ready";
+    this.stopArenaDialogueTimers();
+    this.setArenaDialogOptionsVisible(true);
+  }
+
+  private startArenaSpeechLoop() {
+    if (!this.cache.audio.exists(HUB_AUDIO.speech.key)) return;
+
+    this.sound.play(HUB_AUDIO.speech.key, {
+      volume: HUB_AUDIO.speech.volume,
+    });
+
+    this.arenaSpeechTimer = this.time.addEvent({
+      delay: HUB_AUDIO.speech.repeatDelay,
+      loop: true,
+      callback: () => {
+        this.sound.play(HUB_AUDIO.speech.key, {
+          volume: HUB_AUDIO.speech.volume,
+        });
+      },
+    });
+  }
+
+  private stopArenaDialogueTimers() {
+    this.arenaTypewriterTimer?.remove(false);
+    this.arenaSpeechTimer?.remove(false);
+    this.arenaTypewriterTimer = undefined;
+    this.arenaSpeechTimer = undefined;
+  }
+
+  private setArenaDialogOptionsVisible(isVisible: boolean) {
+    this.arenaDialogOptions.forEach((option) => option.setVisible(isVisible));
   }
 
   private pausePlayerMovement() {
