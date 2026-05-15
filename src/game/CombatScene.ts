@@ -100,12 +100,12 @@ const POWER_UP_GROUND_DURATION = 6000;
 const POWER_UP_GROUND_BLINK_DURATION = 3000;
 const HEALTH_POWER_UP_HEAL = 2;
 const HEALTH_POWER_UP_DROP_CHANCE = 0.15;
-const INVULNERABILITY_POWER_UP_DROP_CHANCE = 0.05;
-const INVULNERABILITY_POWER_UP_MIN_ROUND = 4;
+const INVULNERABILITY_POWER_UP_DROP_CHANCE = 0.17;
+const INVULNERABILITY_POWER_UP_MIN_ROUND = 3;
 const INVULNERABILITY_POWER_UP_DURATION = 4000;
 const INVULNERABILITY_POWER_UP_BLINK_DURATION = 1000;
-const BOSS_INVULNERABILITY_POWER_UP_ATTEMPT_INTERVAL = 7000;
-const BOSS_INVULNERABILITY_POWER_UP_DROP_CHANCE = 0.35;
+const BOSS_INVULNERABILITY_POWER_UP_ATTEMPT_INTERVAL = 5000;
+const BOSS_INVULNERABILITY_POWER_UP_DROP_CHANCE = 0.5;
 const KILL_SCORE = 100;
 const ROUND_SCORE = 250;
 const SECOND_SCORE = 5;
@@ -537,7 +537,11 @@ export default class CombatScene extends Phaser.Scene {
       this.musicControl = undefined;
       this.gameOverFlow?.destroy();
       this.gameOverFlow = undefined;
-      this.events.off("combat:resume-from-pause", this.resumeFromPauseMenu, this);
+      this.events.off(
+        "combat:resume-from-pause",
+        this.resumeFromPauseMenu,
+        this,
+      );
       this.input.keyboard?.off("keydown", this.handleNameInput, this);
       window.removeEventListener("blur", this.handleWindowBlur);
       document.removeEventListener(
@@ -921,7 +925,7 @@ export default class CombatScene extends Phaser.Scene {
 
     this.bossPhaseTwoStarted = true;
     this.startBossInvulnerabilityPowerUpAttempts();
-    this.trySpawnInvulnerabilityPowerUp(BOSS_INVULNERABILITY_POWER_UP_DROP_CHANCE);
+    this.trySpawnInvulnerabilityPowerUp(1);
     this.bossActionState = "recover";
     this.bossActionUntil = this.time.now + BOSS_CONFIG.chargeRecoveryDuration;
     this.nextBossChargeAt = this.time.now + BOSS_CONFIG.chargeInterval;
@@ -1185,7 +1189,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private trySpawnHealthPowerUp() {
     if (this.health >= INITIAL_HEALTH) return;
-    if (this.hasActiveGroundPowerUp()) return;
+    if (this.healthPowerUp?.sprite.active) return;
     if (Phaser.Math.FloatBetween(0, 1) > HEALTH_POWER_UP_DROP_CHANCE) return;
 
     const point = getHealthPowerUpSpawnPoint({
@@ -1199,11 +1203,7 @@ export default class CombatScene extends Phaser.Scene {
       enemies: this.getActiveEnemies(),
     });
 
-    this.healthPowerUp = createHealthPowerUp(
-      this,
-      this.healthPowerUps,
-      point,
-    );
+    this.healthPowerUp = createHealthPowerUp(this, this.healthPowerUps, point);
     this.healthPowerUpBlinkTimer = this.time.delayedCall(
       POWER_UP_GROUND_DURATION - POWER_UP_GROUND_BLINK_DURATION,
       () => this.startHealthPowerUpBlink(),
@@ -1216,7 +1216,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private trySpawnInvulnerabilityPowerUp(dropChance: number) {
     if (this.isPlayerPowerUpInvulnerable) return;
-    if (this.hasActiveGroundPowerUp()) return;
+    if (this.invulnerabilityPowerUp?.sprite.active) return;
     if (!this.canSpawnInvulnerabilityPowerUp()) return;
     if (Phaser.Math.FloatBetween(0, 1) > dropChance) return;
 
@@ -1249,13 +1249,6 @@ export default class CombatScene extends Phaser.Scene {
   private canSpawnInvulnerabilityPowerUp() {
     if (this.isBossRound()) return this.bossPhaseTwoStarted;
     return this.round >= INVULNERABILITY_POWER_UP_MIN_ROUND;
-  }
-
-  private hasActiveGroundPowerUp() {
-    return Boolean(
-      this.healthPowerUp?.sprite.active ||
-        this.invulnerabilityPowerUp?.sprite.active,
-    );
   }
 
   private startHealthPowerUpBlink() {
@@ -1317,7 +1310,8 @@ export default class CombatScene extends Phaser.Scene {
       () => this.stopPlayerPowerUpInvulnerability(),
     );
     this.playerPowerUpInvulnerabilityBlinkTimer = this.time.delayedCall(
-      INVULNERABILITY_POWER_UP_DURATION - INVULNERABILITY_POWER_UP_BLINK_DURATION,
+      INVULNERABILITY_POWER_UP_DURATION -
+        INVULNERABILITY_POWER_UP_BLINK_DURATION,
       () => this.startPlayerPowerUpInvulnerabilityBlink(),
     );
   }
