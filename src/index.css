@@ -139,7 +139,7 @@ a {
 .back-button {
   position: absolute;
   left: max(20px, env(safe-area-inset-left));
-  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 166px);
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 220px);
   min-width: 56px;
   min-height: 48px;
   font-size: 11px;

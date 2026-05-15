@@ -33,6 +33,7 @@ import {
   getInvulnerabilityPowerUpSpawnPoint,
   type InvulnerabilityPowerUp,
 } from "./combat/invulnerabilityPowerUp";
+import { GroundPowerUpSlot } from "./combat/powerUpLifecycle";
 import {
   ENEMY_DEFEAT_DEPTH,
   ENEMY_DEFEAT_DURATION,
@@ -168,14 +169,8 @@ export default class CombatScene extends Phaser.Scene {
   private bossExplosionWarning?: Phaser.GameObjects.Graphics;
   private bossInvulnerableAura?: Phaser.GameObjects.Graphics;
   private bossInvulnerableBlink?: Phaser.Tweens.Tween;
-  private healthPowerUp?: HealthPowerUp;
-  private healthPowerUpBlink?: Phaser.Tweens.Tween;
-  private healthPowerUpBlinkTimer?: Phaser.Time.TimerEvent;
-  private healthPowerUpExpireTimer?: Phaser.Time.TimerEvent;
-  private invulnerabilityPowerUp?: InvulnerabilityPowerUp;
-  private invulnerabilityPowerUpBlink?: Phaser.Tweens.Tween;
-  private invulnerabilityPowerUpBlinkTimer?: Phaser.Time.TimerEvent;
-  private invulnerabilityPowerUpExpireTimer?: Phaser.Time.TimerEvent;
+  private healthPowerUpSlot?: GroundPowerUpSlot<HealthPowerUp>;
+  private invulnerabilityPowerUpSlot?: GroundPowerUpSlot<InvulnerabilityPowerUp>;
   private bossInvulnerabilityPowerUpTimer?: Phaser.Time.TimerEvent;
   private isPlayerPowerUpInvulnerable = false;
   private playerPowerUpInvulnerabilityTimer?: Phaser.Time.TimerEvent;
@@ -416,14 +411,8 @@ export default class CombatScene extends Phaser.Scene {
     this.bossExplosionWarning = undefined;
     this.bossInvulnerableAura = undefined;
     this.bossInvulnerableBlink = undefined;
-    this.healthPowerUp = undefined;
-    this.healthPowerUpBlink = undefined;
-    this.healthPowerUpBlinkTimer = undefined;
-    this.healthPowerUpExpireTimer = undefined;
-    this.invulnerabilityPowerUp = undefined;
-    this.invulnerabilityPowerUpBlink = undefined;
-    this.invulnerabilityPowerUpBlinkTimer = undefined;
-    this.invulnerabilityPowerUpExpireTimer = undefined;
+    this.healthPowerUpSlot = undefined;
+    this.invulnerabilityPowerUpSlot = undefined;
     this.bossInvulnerabilityPowerUpTimer = undefined;
     this.isPlayerPowerUpInvulnerable = false;
     this.playerPowerUpInvulnerabilityTimer = undefined;
@@ -494,6 +483,14 @@ export default class CombatScene extends Phaser.Scene {
   private createPowerUps(wallsLayer: Phaser.Tilemaps.TilemapLayer) {
     this.healthPowerUps = this.physics.add.group();
     this.invulnerabilityPowerUps = this.physics.add.group();
+    this.healthPowerUpSlot = new GroundPowerUpSlot(this, {
+      groundDuration: POWER_UP_GROUND_DURATION,
+      blinkDuration: POWER_UP_GROUND_BLINK_DURATION,
+    });
+    this.invulnerabilityPowerUpSlot = new GroundPowerUpSlot(this, {
+      groundDuration: POWER_UP_GROUND_DURATION,
+      blinkDuration: POWER_UP_GROUND_BLINK_DURATION,
+    });
     this.physics.add.collider(this.healthPowerUps, wallsLayer);
     this.physics.add.collider(this.invulnerabilityPowerUps, wallsLayer);
     this.physics.add.overlap(
@@ -1190,7 +1187,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private trySpawnHealthPowerUp() {
     if (this.health >= INITIAL_HEALTH) return;
-    if (this.healthPowerUp?.sprite.active) return;
+    if (this.healthPowerUpSlot?.isActive()) return;
     if (Phaser.Math.FloatBetween(0, 1) > HEALTH_POWER_UP_DROP_CHANCE) return;
 
     const point = getHealthPowerUpSpawnPoint({
@@ -1204,20 +1201,14 @@ export default class CombatScene extends Phaser.Scene {
       enemies: this.getActiveEnemies(),
     });
 
-    this.healthPowerUp = createHealthPowerUp(this, this.healthPowerUps, point);
-    this.healthPowerUpBlinkTimer = this.time.delayedCall(
-      POWER_UP_GROUND_DURATION - POWER_UP_GROUND_BLINK_DURATION,
-      () => this.startHealthPowerUpBlink(),
-    );
-    this.healthPowerUpExpireTimer = this.time.delayedCall(
-      POWER_UP_GROUND_DURATION,
-      () => this.clearHealthPowerUp(),
+    this.healthPowerUpSlot?.spawn(
+      createHealthPowerUp(this, this.healthPowerUps, point),
     );
   }
 
   private trySpawnInvulnerabilityPowerUp(dropChance: number) {
     if (this.isPlayerPowerUpInvulnerable) return;
-    if (this.invulnerabilityPowerUp?.sprite.active) return;
+    if (this.invulnerabilityPowerUpSlot?.isActive()) return;
     if (!this.canSpawnInvulnerabilityPowerUp()) return;
     if (Phaser.Math.FloatBetween(0, 1) > dropChance) return;
 
@@ -1232,18 +1223,8 @@ export default class CombatScene extends Phaser.Scene {
       enemies: this.getActiveEnemies(),
     });
 
-    this.invulnerabilityPowerUp = createInvulnerabilityPowerUp(
-      this,
-      this.invulnerabilityPowerUps,
-      point,
-    );
-    this.invulnerabilityPowerUpBlinkTimer = this.time.delayedCall(
-      POWER_UP_GROUND_DURATION - POWER_UP_GROUND_BLINK_DURATION,
-      () => this.startInvulnerabilityPowerUpBlink(),
-    );
-    this.invulnerabilityPowerUpExpireTimer = this.time.delayedCall(
-      POWER_UP_GROUND_DURATION,
-      () => this.clearInvulnerabilityPowerUp(),
+    this.invulnerabilityPowerUpSlot?.spawn(
+      createInvulnerabilityPowerUp(this, this.invulnerabilityPowerUps, point),
     );
   }
 
@@ -1252,35 +1233,11 @@ export default class CombatScene extends Phaser.Scene {
     return this.round >= INVULNERABILITY_POWER_UP_MIN_ROUND;
   }
 
-  private startHealthPowerUpBlink() {
-    if (!this.healthPowerUp?.sprite.active) return;
-
-    this.healthPowerUpBlink = this.tweens.add({
-      targets: this.healthPowerUp.sprite,
-      alpha: 0.22,
-      duration: 140,
-      yoyo: true,
-      repeat: -1,
-    });
-  }
-
-  private startInvulnerabilityPowerUpBlink() {
-    if (!this.invulnerabilityPowerUp?.sprite.active) return;
-
-    this.invulnerabilityPowerUpBlink = this.tweens.add({
-      targets: this.invulnerabilityPowerUp.sprite,
-      alpha: 0.22,
-      duration: 140,
-      yoyo: true,
-      repeat: -1,
-    });
-  }
-
   private handleHealthPowerUpCollect = (
     _player: ArcadeOverlapObject,
     powerUp: ArcadeOverlapObject,
   ) => {
-    if (powerUp !== this.healthPowerUp?.sprite) return;
+    if (!this.healthPowerUpSlot?.matches(powerUp)) return;
 
     this.healPlayer(HEALTH_POWER_UP_HEAL);
     this.clearHealthPowerUp();
@@ -1295,7 +1252,7 @@ export default class CombatScene extends Phaser.Scene {
     _player: ArcadeOverlapObject,
     powerUp: ArcadeOverlapObject,
   ) => {
-    if (powerUp !== this.invulnerabilityPowerUp?.sprite) return;
+    if (!this.invulnerabilityPowerUpSlot?.matches(powerUp)) return;
 
     this.startPlayerPowerUpInvulnerability();
     this.clearInvulnerabilityPowerUp();
@@ -1344,27 +1301,11 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private clearHealthPowerUp() {
-    this.healthPowerUpBlinkTimer?.remove(false);
-    this.healthPowerUpExpireTimer?.remove(false);
-    this.healthPowerUpBlink?.stop();
-    this.healthPowerUp?.pulseTween.stop();
-    this.healthPowerUp?.sprite.destroy();
-    this.healthPowerUpBlinkTimer = undefined;
-    this.healthPowerUpExpireTimer = undefined;
-    this.healthPowerUpBlink = undefined;
-    this.healthPowerUp = undefined;
+    this.healthPowerUpSlot?.clear();
   }
 
   private clearInvulnerabilityPowerUp() {
-    this.invulnerabilityPowerUpBlinkTimer?.remove(false);
-    this.invulnerabilityPowerUpExpireTimer?.remove(false);
-    this.invulnerabilityPowerUpBlink?.stop();
-    this.invulnerabilityPowerUp?.pulseTween.stop();
-    this.invulnerabilityPowerUp?.sprite.destroy();
-    this.invulnerabilityPowerUpBlinkTimer = undefined;
-    this.invulnerabilityPowerUpExpireTimer = undefined;
-    this.invulnerabilityPowerUpBlink = undefined;
-    this.invulnerabilityPowerUp = undefined;
+    this.invulnerabilityPowerUpSlot?.clear();
   }
 
   private startBossInvulnerabilityPowerUpAttempts() {
