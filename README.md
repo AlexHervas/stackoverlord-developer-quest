@@ -27,10 +27,13 @@ https://stackoverlord-developer-quest.vercel.app/
 - React modals for CV and About content.
 - Persistent music preference across scenes.
 - Survival arena with rounds, enemies, score and selectable attack modes.
+- Arena health hearts plus health and invulnerability power-ups.
 - Multi-phase arena boss fight with charge and explosion phases.
+- Arena guardian dialogue with leaderboard access from the hub.
 - Supabase-powered combat leaderboard.
 - `localStorage` fallback when Supabase is not configured or unavailable.
 - Real mobile name input for arena leaderboard submissions.
+- OGG audio with MP3 fallbacks for Safari/iPhone compatibility.
 - Social preview metadata for shared links.
 - Responsive fullscreen canvas using Phaser scale handling.
 
@@ -43,6 +46,7 @@ https://stackoverlord-developer-quest.vercel.app/
 | E | Interact, continue, retry or save depending on context |
 | Space | Select manual arena mode or attack when manual mode is active |
 | M | Toggle scene music |
+| P | Pause or resume the arena |
 | Esc | Go back or close modal depending on context |
 
 ## Mobile Controls
@@ -53,6 +57,7 @@ https://stackoverlord-developer-quest.vercel.app/
 | A | Start, interact, continue, select manual arena mode, attack, retry or submit depending on context |
 | Back | Go back or close modal depending on context |
 | M | Toggle music |
+| P | Pause or resume the arena |
 
 Arena name entry uses a real HTML text input on touch devices so mobile keyboards can open correctly.
 
@@ -104,7 +109,8 @@ src/
     CombatNameInput.tsx   Mobile HTML input for arena name entry
     GameCanvas.tsx        React wrapper around the Phaser game
     MobileControls.tsx    Virtual joystick and touch action buttons
-    PortfolioModal.tsx    CV and About modal content
+    PortfolioModal.tsx    CV/About modal layout and interactions
+    portfolioModalContent.ts  CV/About text, links and project data
   game/
     BootScene.ts          Starts the Phaser scene flow
     MenuScene.ts          Title screen and start flow
@@ -112,18 +118,32 @@ src/
     HubScene.ts           NPC hub for CV, About and Arena
     CombatScene.ts        Survival arena gameplay
     combat/
-      attackMode.ts       Arena attack mode selector UI
-      bossConfig.ts       Boss tuning and phase values
-      bossLogic.ts        Pure boss range, contact and explosion helpers
-      bossUi.ts           Boss HUD, warning and invulnerability feedback
+      boss/
+        bossConfig.ts     Boss tuning and phase values
+        bossLogic.ts      Pure boss range, contact and explosion helpers
+        bossUi.ts         Boss HUD, warning and invulnerability feedback
+      powerups/
+        healthPowerUp.ts  Arena health drop creation and spawn point
+        invulnerabilityPowerUp.ts  Shield drop creation and spawn point
+        playerPowerUpInvulnerability.ts  Player shield effect timers
+        powerUpLifecycle.ts  Shared ground power-up timers and cleanup
+        powerUpSpawn.ts   Shared safe power-up spawn helper
+      ranking/
+        ranking.ts        Ranking storage layer with Supabase + fallback
+        supabaseClient.ts Supabase client setup
+      score/
+        combatScore.ts    Arena score and active timer tracking
+      ui/
+        attackMode.ts     Arena attack mode selector UI
+        enemyUi.ts        Enemy defeat visual effects
+        gameOverFlow.ts   Arena score, name entry and ranking flow
+        hud.ts            Combat HUD builders
+        playerAttackUi.ts Player slash visual effect
+      combatSceneConfig.ts  Arena constants, audio config and tuning
       enemySpawning.ts    Enemy and boss spawn point helpers
-      enemyUi.ts          Enemy defeat visual effects
-      gameOverFlow.ts     Arena score, name entry and ranking flow
-      hud.ts              Combat HUD builders
-      playerAttackUi.ts   Player slash visual effect
-      ranking.ts          Ranking storage layer with Supabase + fallback
-      supabaseClient.ts   Supabase client setup
       types.ts            Combat-related TypeScript types
+    hub/
+      arenaGuardianDialog.ts  Arena guardian panel and ranking view
     events/
       events.ts           Typed Phaser-to-React event bus
     input/
@@ -132,6 +152,7 @@ src/
     ui/
       musicControl.ts     Shared music toggle UI
       musicState.ts       Global music preference state
+      typewriterText.ts   Shared typewriter text with speech loop
 public/
   assets/                 Pixel art, tilemaps, audio, CV PDF and social images
 supabase/
@@ -153,7 +174,17 @@ The arena supports two attack modes:
 - Auto-attack: the player aims by moving and attacks automatically on cooldown.
 - Manual attack: the player attacks with `Space` on desktop or `A` on mobile, using the same cooldown and hit range.
 
+The arena HUD shows three hearts. Internally the player has six health points, so each hit removes half a heart. Enemies can drop a heart power-up when health is missing, and from later rounds a shield power-up can grant short invulnerability.
+
 The boss appears on round 10. It has multiple phases: normal chase, enraged charge and an explosion phase where the player must reach the arena edge before the blast resolves.
+
+The arena can be paused with `P` on desktop or the touch `P` button on mobile. Pausing uses a dedicated Phaser pause scene so arena timers and tweens are frozen cleanly.
+
+The arena guardian in the hub introduces the arena and can show the top 10 leaderboard plus the current player's best score before entering.
+
+## Audio
+
+Audio assets are loaded with both OGG and MP3 sources under the same Phaser audio keys. Browsers that support OGG can use it, while Safari/iPhone can fall back to MP3.
 
 ## Maps and Scene Design
 
