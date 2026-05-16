@@ -18,6 +18,81 @@ export type BossInvulnerabilityFeedback = {
   blink: Phaser.Tweens.Tween;
 };
 
+export class BossVisuals {
+  private hud?: BossHud;
+  private explosionWarning?: Phaser.GameObjects.Graphics;
+  private invulnerableAura?: Phaser.GameObjects.Graphics;
+  private invulnerableBlink?: Phaser.Tweens.Tween;
+  private readonly scene: Phaser.Scene;
+  private readonly arenaWidth: number;
+  private readonly arenaBounds: RectBounds;
+
+  constructor(scene: Phaser.Scene, arenaWidth: number, arenaBounds: RectBounds) {
+    this.scene = scene;
+    this.arenaWidth = arenaWidth;
+    this.arenaBounds = arenaBounds;
+  }
+
+  drawHealthBar(health: number, position: { x: number; y: number }) {
+    this.hud ??= createBossHud(this.scene, this.arenaWidth);
+    drawBossHealthBar(this.hud, health, position);
+  }
+
+  clearHealthBar() {
+    clearBossHud(this.hud);
+  }
+
+  setHudVisible(isVisible: boolean) {
+    setBossHudVisible(this.hud, isVisible);
+  }
+
+  getExplosionWarning() {
+    this.explosionWarning ??= createBossExplosionWarning(this.scene);
+    return this.explosionWarning;
+  }
+
+  drawExplosionWarning(danger: RectBounds, alpha: number) {
+    drawBossExplosionWarning(
+      this.getExplosionWarning(),
+      danger,
+      this.arenaBounds,
+      alpha,
+    );
+  }
+
+  clearExplosionWarning() {
+    clearBossExplosionWarning(this.explosionWarning);
+  }
+
+  startInvulnerabilityFeedback(boss: Phaser.Physics.Arcade.Sprite) {
+    const feedback = startBossInvulnerabilityFeedback(
+      this.scene,
+      boss,
+      this.invulnerableAura,
+      this.invulnerableBlink,
+    );
+    this.invulnerableAura = feedback.aura;
+    this.invulnerableBlink = feedback.blink;
+  }
+
+  updateInvulnerabilityAuraPosition(
+    boss: Phaser.Physics.Arcade.Sprite | undefined,
+  ) {
+    updateBossInvulnerabilityAuraPosition(this.invulnerableAura, boss);
+  }
+
+  stopInvulnerabilityFeedback(boss: Phaser.Physics.Arcade.Sprite | undefined) {
+    stopBossInvulnerabilityFeedback(
+      {
+        aura: this.invulnerableAura,
+        blink: this.invulnerableBlink,
+      },
+      boss,
+    );
+    this.invulnerableBlink = undefined;
+  }
+}
+
 export function createBossHud(
   scene: Phaser.Scene,
   arenaWidth: number,

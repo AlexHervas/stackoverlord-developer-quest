@@ -57,17 +57,7 @@ import {
   isPointInsideBounds,
 } from "./combat/bossLogic";
 import {
-  clearBossExplosionWarning,
-  clearBossHud,
-  createBossExplosionWarning,
-  createBossHud,
-  drawBossExplosionWarning,
-  drawBossHealthBar,
-  setBossHudVisible,
-  startBossInvulnerabilityFeedback,
-  stopBossInvulnerabilityFeedback,
-  updateBossInvulnerabilityAuraPosition,
-  type BossHud,
+  BossVisuals,
 } from "./combat/bossUi";
 import {
   ARENA_BOUNDS,
@@ -136,10 +126,7 @@ export default class CombatScene extends Phaser.Scene {
   private bossActionUntil = 0;
   private nextBossChargeAt = 0;
   private bossChargeDirection = new Phaser.Math.Vector2(0, 0);
-  private bossHud?: BossHud;
-  private bossExplosionWarning?: Phaser.GameObjects.Graphics;
-  private bossInvulnerableAura?: Phaser.GameObjects.Graphics;
-  private bossInvulnerableBlink?: Phaser.Tweens.Tween;
+  private bossVisuals?: BossVisuals;
   private healthPowerUpSlot?: GroundPowerUpSlot<HealthPowerUp>;
   private invulnerabilityPowerUpSlot?: GroundPowerUpSlot<InvulnerabilityPowerUp>;
   private bossInvulnerabilityPowerUpTimer?: Phaser.Time.TimerEvent;
@@ -369,10 +356,7 @@ export default class CombatScene extends Phaser.Scene {
     this.bossActionUntil = 0;
     this.nextBossChargeAt = 0;
     this.bossChargeDirection.set(0, 0);
-    this.bossHud = undefined;
-    this.bossExplosionWarning = undefined;
-    this.bossInvulnerableAura = undefined;
-    this.bossInvulnerableBlink = undefined;
+    this.bossVisuals = undefined;
     this.healthPowerUpSlot = undefined;
     this.invulnerabilityPowerUpSlot = undefined;
     this.bossInvulnerabilityPowerUpTimer = undefined;
@@ -678,6 +662,7 @@ export default class CombatScene extends Phaser.Scene {
     this.bossPhaseTwoStarted = false;
     this.bossPhaseThreeStarted = false;
     this.bossInvulnerable = false;
+    this.bossVisuals = new BossVisuals(this, ARENA_WIDTH, ARENA_BOUNDS);
 
     this.physics.add.collider(this.boss, this.wallsLayer);
     this.drawBossHealthBar();
@@ -944,6 +929,7 @@ export default class CombatScene extends Phaser.Scene {
     if (!this.boss?.active || this.isGameOver) return;
 
     const warning = this.getBossExplosionWarning();
+    if (!warning) return;
     warning.setVisible(true);
     this.drawBossExplosionWarning(0.24);
 
@@ -982,45 +968,26 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private getBossExplosionWarning() {
-    if (!this.bossExplosionWarning) {
-      this.bossExplosionWarning = createBossExplosionWarning(this);
-    }
-
-    return this.bossExplosionWarning;
+    return this.bossVisuals?.getExplosionWarning();
   }
 
   private startBossInvulnerableFeedback() {
     if (!this.boss?.active) return;
 
-    const feedback = startBossInvulnerabilityFeedback(
-      this,
-      this.boss,
-      this.bossInvulnerableAura,
-      this.bossInvulnerableBlink,
-    );
-    this.bossInvulnerableAura = feedback.aura;
-    this.bossInvulnerableBlink = feedback.blink;
+    this.bossVisuals?.startInvulnerabilityFeedback(this.boss);
   }
 
   private updateBossInvulnerableAuraPosition() {
-    updateBossInvulnerabilityAuraPosition(this.bossInvulnerableAura, this.boss);
+    this.bossVisuals?.updateInvulnerabilityAuraPosition(this.boss);
   }
 
   private stopBossInvulnerableFeedback() {
-    stopBossInvulnerabilityFeedback(
-      {
-        aura: this.bossInvulnerableAura,
-        blink: this.bossInvulnerableBlink,
-      },
-      this.boss,
-    );
-    this.bossInvulnerableBlink = undefined;
+    this.bossVisuals?.stopInvulnerabilityFeedback(this.boss);
   }
 
   private drawBossExplosionWarning(alpha: number) {
-    const warning = this.getBossExplosionWarning();
     const danger = this.getBossExplosionDangerBounds();
-    drawBossExplosionWarning(warning, danger, ARENA_BOUNDS, alpha);
+    this.bossVisuals?.drawExplosionWarning(danger, alpha);
   }
 
   private getBossExplosionDangerBounds() {
@@ -1331,7 +1298,7 @@ export default class CombatScene extends Phaser.Scene {
     this.healthHearts.forEach((heart) => heart.setVisible(isVisible));
     this.enemiesText.setVisible(isVisible);
     this.scoreText.setVisible(isVisible);
-    setBossHudVisible(this.bossHud, isVisible && this.isBossAlive());
+    this.bossVisuals?.setHudVisible(isVisible && this.isBossAlive());
   }
 
   private isBossAlive() {
@@ -1344,19 +1311,18 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
 
-    this.bossHud ??= createBossHud(this, ARENA_WIDTH);
-    drawBossHealthBar(this.bossHud, this.bossHealth, {
+    this.bossVisuals?.drawHealthBar(this.bossHealth, {
       x: BOSS_BAR_X,
       y: BOSS_BAR_Y,
     });
   }
 
   private clearBossHealthBar() {
-    clearBossHud(this.bossHud);
+    this.bossVisuals?.clearHealthBar();
   }
 
   private clearBossExplosionWarning() {
-    clearBossExplosionWarning(this.bossExplosionWarning);
+    this.bossVisuals?.clearExplosionWarning();
   }
 
   private getActiveEnemies() {
