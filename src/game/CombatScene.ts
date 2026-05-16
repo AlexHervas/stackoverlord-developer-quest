@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { audioSources } from "./audio/audioSources";
 import {
   createHudTexts,
   createOverlayTexts,
@@ -70,87 +69,50 @@ import {
   updateBossInvulnerabilityAuraPosition,
   type BossHud,
 } from "./combat/bossUi";
-
-const ARENA_WIDTH = 320;
-const ARENA_HEIGHT = 160;
-const SPEED = 95;
-const ENEMY_SPEED = 22;
-const BOSS_CENTER_X = ARENA_WIDTH / 2;
-const BOSS_CENTER_Y = ARENA_HEIGHT / 2;
-const BOSS_BAR_X = ARENA_WIDTH / 2 - BOSS_CONFIG.barWidth / 2;
-const BOSS_BAR_Y = 16;
-const ATTACK_RANGE = 34;
-const ATTACK_COOLDOWN = 700;
-const DAMAGE_COOLDOWN = 900;
-const MAX_NAME_LENGTH = 10;
-const UI_FONT = "11px";
-const TITLE_FONT = "12px";
-const INITIAL_ROUND = 1;
-const INITIAL_HEALTH = 6;
-const PLAYER_START_Y_OFFSET = 18;
-const PLAYER_BODY_WIDTH = 14;
-const PLAYER_BODY_HEIGHT = 14;
-const ENEMY_SPEED_PER_ROUND = 0.5;
-const ATTACK_CENTER_OFFSET = 14;
-const ATTACK_HIT_PADDING = 8;
-const PLAYER_HIT_SHAKE_DURATION = 90;
-const PLAYER_HIT_SHAKE_INTENSITY = 0.008;
-const PLAYER_HIT_TINT = 0xff6b6b;
-const PLAYER_HIT_BLINK_ALPHA = 0.35;
-const PLAYER_HIT_BLINK_DURATION = 80;
-const PLAYER_HIT_BLINK_REPEATS = 5;
-const ROUND_START_DELAY = 900;
-const POWER_UP_GROUND_DURATION = 6000;
-const POWER_UP_GROUND_BLINK_DURATION = 3000;
-const HEALTH_POWER_UP_HEAL = 2;
-const HEALTH_POWER_UP_DROP_CHANCE = 0.15;
-const INVULNERABILITY_POWER_UP_DROP_CHANCE = 0.17;
-const INVULNERABILITY_POWER_UP_MIN_ROUND = 3;
-const INVULNERABILITY_POWER_UP_DURATION = 4000;
-const INVULNERABILITY_POWER_UP_BLINK_DURATION = 1000;
-const BOSS_INVULNERABILITY_POWER_UP_ATTEMPT_INTERVAL = 5000;
-const BOSS_INVULNERABILITY_POWER_UP_DROP_CHANCE = 0.5;
-const KILL_SCORE = 100;
-const ROUND_SCORE = 250;
-const SECOND_SCORE = 5;
-const MAX_TIME_SCORE_SECONDS_PER_ROUND = 15;
-const MAX_TIME_SCORE_SECONDS_BOSS_ROUND = 25;
-const ARENA_BOUNDS = {
-  x: 12,
-  y: 16,
-  width: ARENA_WIDTH - 24,
-  height: ARENA_HEIGHT - 28,
-};
-const HUD_CONFIG = {
-  arenaWidth: ARENA_WIDTH,
-  arenaHeight: ARENA_HEIGHT,
-  titleFont: TITLE_FONT,
-  uiFont: UI_FONT,
-};
-const SCORE_CONFIG = {
-  killScore: KILL_SCORE,
-  roundScore: ROUND_SCORE,
-  secondScore: SECOND_SCORE,
-  maxTimeScoreSecondsPerRound: MAX_TIME_SCORE_SECONDS_PER_ROUND,
-  maxTimeScoreSecondsBossRound: MAX_TIME_SCORE_SECONDS_BOSS_ROUND,
-};
-const COMBAT_AUDIO = {
-  music: {
-    key: "combatSceneMusic",
-    paths: audioSources("assets/audio/combatScene_theme"),
-    volume: 0.12,
-  },
-  attack: {
-    key: "combatSwordSound",
-    paths: audioSources("assets/audio/sword"),
-    volume: 0.05,
-  },
-  playerHit: {
-    key: "combatPlayerHitSound",
-    paths: audioSources("assets/audio/hit"),
-    volume: 0.5,
-  },
-};
+import {
+  ARENA_BOUNDS,
+  ARENA_HEIGHT,
+  ARENA_WIDTH,
+  ATTACK_CENTER_OFFSET,
+  ATTACK_COOLDOWN,
+  ATTACK_HIT_PADDING,
+  ATTACK_RANGE,
+  BOSS_BAR_X,
+  BOSS_BAR_Y,
+  BOSS_CENTER_X,
+  BOSS_CENTER_Y,
+  BOSS_INVULNERABILITY_POWER_UP_ATTEMPT_INTERVAL,
+  BOSS_INVULNERABILITY_POWER_UP_DROP_CHANCE,
+  COMBAT_AUDIO,
+  DAMAGE_COOLDOWN,
+  ENEMY_SPEED,
+  ENEMY_SPEED_PER_ROUND,
+  HEALTH_POWER_UP_DROP_CHANCE,
+  HEALTH_POWER_UP_HEAL,
+  HUD_CONFIG,
+  INITIAL_HEALTH,
+  INITIAL_ROUND,
+  INVULNERABILITY_POWER_UP_BLINK_DURATION,
+  INVULNERABILITY_POWER_UP_DROP_CHANCE,
+  INVULNERABILITY_POWER_UP_DURATION,
+  INVULNERABILITY_POWER_UP_MIN_ROUND,
+  MAX_NAME_LENGTH,
+  PLAYER_BODY_HEIGHT,
+  PLAYER_BODY_WIDTH,
+  PLAYER_HIT_BLINK_ALPHA,
+  PLAYER_HIT_BLINK_DURATION,
+  PLAYER_HIT_BLINK_REPEATS,
+  PLAYER_HIT_SHAKE_DURATION,
+  PLAYER_HIT_SHAKE_INTENSITY,
+  PLAYER_HIT_TINT,
+  PLAYER_START_Y_OFFSET,
+  POWER_UP_GROUND_BLINK_DURATION,
+  POWER_UP_GROUND_DURATION,
+  ROUND_START_DELAY,
+  SCORE_CONFIG,
+  SPEED,
+  TITLE_FONT,
+} from "./combat/combatSceneConfig";
 
 type ArcadeOverlapObject =
   | Phaser.Types.Physics.Arcade.GameObjectWithBody
