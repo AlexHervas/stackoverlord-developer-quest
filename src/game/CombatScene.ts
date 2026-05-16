@@ -4,7 +4,7 @@ import {
   createOverlayTexts,
   createStaticTexts,
   updateHealthHearts,
-} from "./combat/hud";
+} from "./combat/ui/hud";
 import { getAttackHubHint, getManualAttackHubHint } from "./input/inputMode";
 import { virtualInput } from "./input/virtualInput";
 import { createMusicControl } from "./ui/musicControl";
@@ -12,12 +12,12 @@ import {
   createAttackModeSelection,
   type AttackMode,
   type CombatSceneData,
-} from "./combat/attackMode";
+} from "./combat/ui/attackMode";
 import {
   CombatGameOverFlow,
   type CombatGameOverStats,
-} from "./combat/gameOverFlow";
-import { CombatScoreTracker } from "./combat/combatScore";
+} from "./combat/ui/gameOverFlow";
+import { CombatScoreTracker } from "./combat/score/combatScore";
 import {
   getBossSpawnPoint,
   getEnemySpawnPoint,
@@ -27,26 +27,26 @@ import {
   createHealthPowerUp,
   getHealthPowerUpSpawnPoint,
   type HealthPowerUp,
-} from "./combat/healthPowerUp";
+} from "./combat/powerups/healthPowerUp";
 import {
   createInvulnerabilityPowerUp,
   getInvulnerabilityPowerUpSpawnPoint,
   type InvulnerabilityPowerUp,
-} from "./combat/invulnerabilityPowerUp";
-import { PlayerPowerUpInvulnerability } from "./combat/playerPowerUpInvulnerability";
-import { GroundPowerUpSlot } from "./combat/powerUpLifecycle";
+} from "./combat/powerups/invulnerabilityPowerUp";
+import { PlayerPowerUpInvulnerability } from "./combat/powerups/playerPowerUpInvulnerability";
+import { GroundPowerUpSlot } from "./combat/powerups/powerUpLifecycle";
 import {
   ENEMY_DEFEAT_DEPTH,
   ENEMY_DEFEAT_DURATION,
   ENEMY_DEFEAT_SCALE,
   playEnemyDefeatEffect,
-} from "./combat/enemyUi";
+} from "./combat/ui/enemyUi";
 import {
   createSlashEffect,
   SLASH_FADE_DURATION,
   SLASH_FADE_SCALE,
-} from "./combat/playerAttackUi";
-import { BOSS_CONFIG, type BossActionState } from "./combat/bossConfig";
+} from "./combat/ui/playerAttackUi";
+import { BOSS_CONFIG, type BossActionState } from "./combat/boss/bossConfig";
 import {
   getBossExplosionDangerBounds,
   getBossHitTransition,
@@ -55,10 +55,10 @@ import {
   isBossContactDamagingPlayer,
   isBossInAttackRange,
   isPointInsideBounds,
-} from "./combat/bossLogic";
+} from "./combat/boss/bossLogic";
 import {
   BossVisuals,
-} from "./combat/bossUi";
+} from "./combat/boss/bossUi";
 import {
   ARENA_BOUNDS,
   ARENA_HEIGHT,

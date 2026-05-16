@@ -8,7 +8,7 @@ import {
   getBestScore,
   getPlayerId,
   loadRanking,
-} from "./combat/ranking";
+} from "./combat/ranking/ranking";
 import {
   ARENA_DIALOG_TEXT,
   ARENA_TYPEWRITER_SPEED,

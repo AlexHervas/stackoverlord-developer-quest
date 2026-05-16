@@ -1,5 +1,5 @@
 import { audioSources } from "../audio/audioSources";
-import { BOSS_CONFIG } from "./bossConfig";
+import { BOSS_CONFIG } from "./boss/bossConfig";
 
 export const ARENA_WIDTH = 320;
 export const ARENA_HEIGHT = 160;
@@ -15,7 +15,7 @@ export const DAMAGE_COOLDOWN = 900;
 export const MAX_NAME_LENGTH = 10;
 export const UI_FONT = "11px";
 export const TITLE_FONT = "12px";
-export const INITIAL_ROUND = 1;
+export const INITIAL_ROUND = 9;
 export const INITIAL_HEALTH = 6;
 export const PLAYER_START_Y_OFFSET = 18;
 export const PLAYER_BODY_WIDTH = 14;

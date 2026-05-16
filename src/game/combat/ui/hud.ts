@@ -4,8 +4,8 @@ import type {
   CombatHudTexts,
   CombatOverlayTexts,
   CombatStaticTexts,
-} from "./types";
-import { getAttackHubHint } from "../input/inputMode";
+} from "../types";
+import { getAttackHubHint } from "../../input/inputMode";
 
 const HEART_FULL_FRAME = 0;
 const HEART_HALF_FRAME = 1;

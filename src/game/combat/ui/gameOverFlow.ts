@@ -1,14 +1,14 @@
 import type Phaser from "phaser";
-import { eventBus } from "../events/events";
-import { getNameSubmitHint, getRetryHubHint } from "../input/inputMode";
+import { eventBus } from "../../events/events";
+import { getNameSubmitHint, getRetryHubHint } from "../../input/inputMode";
 import {
   formatRankingRows,
   getBestScore,
   getPlayerId,
   loadRanking,
   saveRankingEntry,
-} from "./ranking";
-import type { CombatOverlayTexts, RankingEntry } from "./types";
+} from "../ranking/ranking";
+import type { CombatOverlayTexts, RankingEntry } from "../types";
 
 export type CombatGameOverStats = {
   score: number;

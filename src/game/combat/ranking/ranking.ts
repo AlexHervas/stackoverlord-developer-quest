@@ -1,4 +1,4 @@
-import type { RankingEntry } from "./types";
+import type { RankingEntry } from "../types";
 import { hasSupabaseConfig, supabase } from "./supabaseClient";
 
 export const RANKING_KEY = "portfolioCombatRanking";

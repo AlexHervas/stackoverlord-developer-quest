@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import type { SpawnPoint } from "./types";
+import type { SpawnPoint } from "../types";
 
 const SPAWN_MARGIN = 20;
 const MIN_PLAYER_DISTANCE = 44;

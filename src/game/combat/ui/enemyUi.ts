@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import type { Point } from "./bossLogic";
+import type { Point } from "../boss/bossLogic";
 
 const ENEMY_HIT_TINT = 0xffb3b3;
 export const ENEMY_DEFEAT_DEPTH = 4;
