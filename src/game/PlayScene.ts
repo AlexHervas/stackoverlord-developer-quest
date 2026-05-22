@@ -9,6 +9,8 @@ const ROOM_WIDTH = 320;
 const ROOM_HEIGHT = 160;
 const SPEED = 90;
 const TALK_DISTANCE = 18;
+const WIZARD_X = ROOM_WIDTH / 2 + 90;
+const WIZARD_Y = ROOM_HEIGHT / 2 + 55;
 const DIALOG_TEXT = "Welcome to my realm. The road ahead leads to the city.";
 const UI_STYLE = {
   fontFamily: "monospace",
@@ -153,7 +155,7 @@ export default class PlayScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
 
     this.wizard = this.physics.add
-      .staticSprite(ROOM_WIDTH / 2 + 150, ROOM_HEIGHT / 2 + 40, "wizard")
+      .staticSprite(WIZARD_X, WIZARD_Y, "wizard")
       .setScale(1);
 
     this.wizard.flipX = true;

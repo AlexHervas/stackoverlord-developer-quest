@@ -314,7 +314,9 @@ Do not add Supabase `service_role` or secret keys to Vercel for this frontend-on
 Visual and audio assets used in this portfolio come from:
 
 - https://kenney.nl/
+- https://itch.io/
 - https://pixabay.com/es/
+- https://freesound.org/
 - https://soundimage.org/
 - https://patrickdearteaga.com/
 
