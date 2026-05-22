@@ -81,6 +81,14 @@ export function createMusicControl(
   const playMusic = async () => {
     if (!ensureMusic()) return false;
 
+    if (music?.isPaused) {
+      music.resume();
+    } else if (!music?.isPlaying) {
+      music?.play();
+    }
+
+    if (music?.isPlaying) return true;
+
     await unlockAudio(scene);
     if (isDestroyed) return false;
 
