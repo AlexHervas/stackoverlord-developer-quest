@@ -20,9 +20,25 @@ function stopPointer(event: PointerEvent<HTMLElement>) {
 }
 
 function ActionButton({ action, label, className = "" }: ActionButtonProps) {
+  const activePointerId = useRef<number | null>(null);
+
   const press = (event: PointerEvent<HTMLButtonElement>) => {
     stopPointer(event);
+    activePointerId.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
     virtualInput.pressAction(action);
+  };
+
+  const release = (event: PointerEvent<HTMLButtonElement>) => {
+    stopPointer(event);
+
+    if (activePointerId.current !== event.pointerId) return;
+
+    activePointerId.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    virtualInput.releaseAction(action);
   };
 
   return (
@@ -31,6 +47,8 @@ function ActionButton({ action, label, className = "" }: ActionButtonProps) {
       aria-label={label}
       className={`mobile-control-button ${className}`}
       onPointerDown={press}
+      onPointerUp={release}
+      onPointerCancel={release}
       onContextMenu={(event) => event.preventDefault()}
     >
       {label}
@@ -112,7 +130,10 @@ function VirtualJoystick() {
 
 export default function MobileControls({ hidden }: MobileControlsProps) {
   useEffect(() => {
-    if (hidden) virtualInput.releaseDirections();
+    if (!hidden) return;
+
+    virtualInput.releaseDirections();
+    virtualInput.releaseActions();
   }, [hidden]);
 
   if (hidden) {

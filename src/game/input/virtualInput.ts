@@ -21,6 +21,13 @@ const actionPresses: Record<VirtualAction, number> = {
   pause: 0,
 };
 
+const actionState: Record<VirtualAction, boolean> = {
+  primary: false,
+  back: false,
+  music: false,
+  pause: false,
+};
+
 const consumedPresses: Record<VirtualAction, number> = {
   primary: 0,
   back: 0,
@@ -49,8 +56,17 @@ export const virtualInput = {
   },
 
   pressAction(action: VirtualAction) {
+    actionState[action] = true;
     actionPresses[action] += 1;
     actionHandlers.get(action)?.forEach((handler) => handler());
+  },
+
+  releaseAction(action: VirtualAction) {
+    actionState[action] = false;
+  },
+
+  isActionDown(action: VirtualAction) {
+    return actionState[action];
   },
 
   consumeAction(action: VirtualAction) {
@@ -74,6 +90,13 @@ export const virtualInput = {
     directionState.right = false;
     moveVector.x = 0;
     moveVector.y = 0;
+  },
+
+  releaseActions() {
+    actionState.primary = false;
+    actionState.back = false;
+    actionState.music = false;
+    actionState.pause = false;
   },
 
   clearActions() {

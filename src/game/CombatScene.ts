@@ -763,7 +763,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private handlePlayerAttackInput() {
     if (this.attackMode === "manual") {
-      if (this.isManualAttackJustPressed()) this.tryPlayerAttack();
+      if (this.isManualAttackPressed()) this.tryPlayerAttack();
       return;
     }
 
@@ -771,10 +771,9 @@ export default class CombatScene extends Phaser.Scene {
     this.tryPlayerAttack();
   }
 
-  private isManualAttackJustPressed() {
+  private isManualAttackPressed() {
     return (
-      Phaser.Input.Keyboard.JustDown(this.cursors!.space) ||
-      virtualInput.consumeAction("primary")
+      this.cursors!.space.isDown || virtualInput.isActionDown("primary")
     );
   }
 
