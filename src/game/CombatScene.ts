@@ -131,6 +131,7 @@ export default class CombatScene extends Phaser.Scene {
   private invulnerabilityPowerUpSlot?: GroundPowerUpSlot<InvulnerabilityPowerUp>;
   private bossInvulnerabilityPowerUpTimer?: Phaser.Time.TimerEvent;
   private playerPowerUpInvulnerability?: PlayerPowerUpInvulnerability;
+  private playerHitFeedbackTween?: Phaser.Tweens.Tween;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private escKey!: Phaser.Input.Keyboard.Key;
   private retryKey!: Phaser.Input.Keyboard.Key;
@@ -1188,6 +1189,7 @@ export default class CombatScene extends Phaser.Scene {
   ) => {
     if (!this.invulnerabilityPowerUpSlot?.matches(powerUp)) return;
 
+    this.stopPlayerHitFeedback();
     this.playerPowerUpInvulnerability?.start();
     this.clearInvulnerabilityPowerUp();
   };
@@ -1218,20 +1220,31 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private startPlayerInvulnerabilityFeedback() {
+    this.stopPlayerHitFeedback();
     this.player.setTint(PLAYER_HIT_TINT);
 
-    this.tweens.add({
+    this.playerHitFeedbackTween = this.tweens.add({
       targets: this.player,
       alpha: PLAYER_HIT_BLINK_ALPHA,
       duration: PLAYER_HIT_BLINK_DURATION,
       yoyo: true,
       repeat: PLAYER_HIT_BLINK_REPEATS,
       onComplete: () => {
+        this.playerHitFeedbackTween = undefined;
         if (!this.player.active) return;
         this.player.setAlpha(1);
+        if (this.playerPowerUpInvulnerability?.isActive()) return;
         this.player.clearTint();
       },
     });
+  }
+
+  private stopPlayerHitFeedback() {
+    this.playerHitFeedbackTween?.stop();
+    this.playerHitFeedbackTween = undefined;
+
+    if (!this.player.active) return;
+    this.player.setAlpha(1);
   }
 
   private checkRoundComplete() {
