@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { unlockAudio } from "../audio/unlockAudio";
 import { getMusicHint } from "../input/inputMode";
 import { virtualInput } from "../input/virtualInput";
 import { getMusicEnabled, setMusicEnabled } from "./musicState";
@@ -32,6 +33,7 @@ export function createMusicControl(
 ): MusicControl {
   let music: Phaser.Sound.BaseSound | undefined;
   let isMusicEnabled = options.initialEnabled ?? getMusicEnabled();
+  let isDestroyed = false;
 
   const controlText = scene.add
     .text(options.x, options.y, getMusicHint(isMusicEnabled), options.style)
@@ -47,10 +49,12 @@ export function createMusicControl(
   }
 
   const updateText = () => {
+    if (isDestroyed) return;
     controlText.setText(getMusicHint(isMusicEnabled));
   };
 
   const setEnabled = (isEnabled: boolean) => {
+    if (isDestroyed) return;
     isMusicEnabled = isEnabled;
     if (options.onEnabledChange) {
       options.onEnabledChange(isMusicEnabled);
@@ -61,6 +65,7 @@ export function createMusicControl(
   };
 
   const ensureMusic = () => {
+    if (isDestroyed) return false;
     if (!scene.cache.audio.exists(musicConfig.key)) return false;
 
     if (!music) {
@@ -73,8 +78,11 @@ export function createMusicControl(
     return true;
   };
 
-  const playMusic = () => {
+  const playMusic = async () => {
     if (!ensureMusic()) return false;
+
+    await unlockAudio(scene);
+    if (isDestroyed) return false;
 
     if (music?.isPaused) {
       music.resume();
@@ -82,10 +90,10 @@ export function createMusicControl(
       music?.play();
     }
 
-    return true;
+    return music?.isPlaying ?? false;
   };
 
-  const toggle = () => {
+  const toggle = async () => {
     if (options.canToggle && !options.canToggle()) return;
 
     if (isMusicEnabled) {
@@ -94,14 +102,21 @@ export function createMusicControl(
       return;
     }
 
-    if (playMusic()) setEnabled(true);
+    const didPlay = await playMusic();
+    if (didPlay) setEnabled(true);
   };
 
-  if (isMusicEnabled && !playMusic()) setEnabled(false);
+  if (isMusicEnabled) {
+    void playMusic().then((didPlay) => {
+      if (!didPlay) setEnabled(false);
+    });
+  }
 
-  controlText.on("pointerdown", toggle);
-  scene.input.keyboard?.on("keydown-M", toggle);
-  const offVirtualMusic = virtualInput.onAction("music", toggle);
+  const handleToggle = () => void toggle();
+
+  controlText.on("pointerdown", handleToggle);
+  scene.input.keyboard?.on("keydown-M", handleToggle);
+  const offVirtualMusic = virtualInput.onAction("music", handleToggle);
 
   return {
     stop: () => {
@@ -109,9 +124,10 @@ export function createMusicControl(
       updateText();
     },
     destroy: () => {
+      isDestroyed = true;
       offVirtualMusic();
-      scene.input.keyboard?.off("keydown-M", toggle);
-      controlText.off("pointerdown", toggle);
+      scene.input.keyboard?.off("keydown-M", handleToggle);
+      controlText.off("pointerdown", handleToggle);
       controlText.destroy();
       music?.stop();
       music?.destroy();
