@@ -27,6 +27,14 @@ function getViewportHeight() {
   return window.visualViewport?.height ?? window.innerHeight;
 }
 
+function shouldDisableWebAudio() {
+  const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isTouchMac =
+    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+
+  return isIosDevice || isTouchMac;
+}
+
 export default function GameCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -47,6 +55,9 @@ export default function GameCanvas() {
       type: Phaser.AUTO,
       parent: containerRef.current,
       backgroundColor: "#0f172a",
+      audio: {
+        disableWebAudio: shouldDisableWebAudio(),
+      },
       render: {
         pixelArt: true,
         antialias: false,
